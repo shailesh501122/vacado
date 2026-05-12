@@ -28,7 +28,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       final repo = context.read<CatalogRepository>();
       final p = await repo.product(widget.slug);
       if (!mounted) return;
-      final defaultIdx = (p.packOptions as List).indexWhere((e) => (e as Map)['best'] == true);
+      final defaultIdx = p.packOptions.indexWhere((e) => (e as Map)['best'] == true);
       setState(() {
         _p = p;
         _packIdx = defaultIdx >= 0 ? defaultIdx : 0;

@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+// `Category` exists in `foundation.dart` too — hide it to disambiguate.
+import 'package:flutter/foundation.dart' hide Category;
 import '../data/repositories.dart';
 import '../models/product.dart';
 

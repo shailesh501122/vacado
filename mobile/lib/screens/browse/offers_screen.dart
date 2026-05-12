@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../data/repositories.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/tokens.dart';
-import '../../widgets/back_button.dart';
 
 class OffersScreen extends StatefulWidget {
   const OffersScreen({super.key});
