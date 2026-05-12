@@ -51,3 +51,9 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Secrets / local-only
+ssh-key-*.key
+ssh-key-*.key.pub
+.deploy/
+.claude/

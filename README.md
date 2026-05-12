@@ -177,12 +177,28 @@ visual tokens were translated into `mobile/lib/theme/tokens.dart` and the
 widget primitives were rebuilt natively, not lifted verbatim from the HTML
 prototype.
 
-## 5. What's next
+## 5. Admin panel
+
+The API also ships a single-page admin console at **`/admin`** — log in with
+the seeded credentials (`Admin` / `Admin@123`) and you get a dashboard with
+revenue, today's orders, status breakdown, and top products, plus full CRUD
+for products and coupons, an orders board with status transitions, and a
+customer list.
+
+The console is a self-contained React SPA (no build step — React 18 UMD +
+Tailwind CDN + Babel-Standalone) served from `backend/public/admin/`. It
+talks to a separate `/api/v1/admin/*` namespace gated by the
+`adminRequired` middleware (bcrypt-hashed password → admin-scoped JWT).
+
+Seed or rotate the admin password:
+
+```bash
+ADMIN_USERNAME=Admin ADMIN_PASSWORD='Admin@123' npm run seed:admin
+```
+
+## 6. What's next
 
 - Wire a real SMS/WhatsApp OTP provider (Twilio, Gupshup, MSG91).
 - Plug in a real payment gateway for the `payment_method` flow.
 - Replace the faux delivery map with Mapbox / Google Maps + a websocket
   channel for live rider position.
-- The admin panel from the chat transcript is not yet built — `pages.jsx` and
-  `admin.css` in the source bundle are a starting point for a Next.js or
-  plain React build.

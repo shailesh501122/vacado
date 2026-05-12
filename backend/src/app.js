@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -16,7 +17,8 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
-app.use(helmet());
+// Helmet with CSP relaxed so the admin SPA can pull react + tailwind from a CDN.
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(cors({ origin: config.cors.origin, credentials: false }));
 app.use(compression());
 app.use(express.json({ limit: '256kb' }));
@@ -34,12 +36,18 @@ app.use(config.apiPrefix, limiter);
 
 app.use(config.apiPrefix, routes);
 
+// Static admin SPA — single-page React app served from /admin
+const adminPath = path.resolve(__dirname, '../public/admin');
+app.use('/admin', express.static(adminPath, { extensions: ['html'] }));
+app.get(/^\/admin(\/.*)?$/, (_req, res) => res.sendFile(path.join(adminPath, 'index.html')));
+
 // Root info
 app.get('/', (_req, res) => {
   res.json({
     name: 'Vacado API',
     version: '1.0.0',
     apiPrefix: config.apiPrefix,
+    admin: '/admin',
     docs: `${config.apiPrefix}/health`,
   });
 });

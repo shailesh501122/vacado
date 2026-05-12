@@ -10,6 +10,7 @@ const wishlist = require('./wishlistRoutes');
 const orders = require('./orderRoutes');
 const addresses = require('./addressRoutes');
 const coupons = require('./couponRoutes');
+const admin = require('./adminRoutes');
 
 router.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 
@@ -20,5 +21,6 @@ router.use('/wishlist',  wishlist);
 router.use('/orders',    orders);
 router.use('/addresses', addresses);
 router.use('/coupons',   coupons);
+router.use('/admin',     admin);
 
 module.exports = router;

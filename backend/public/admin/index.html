@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vacado · Admin</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 12c-20 0-30 12-30 30 0 18 14 28 27 41 1 1 4 1 5 0 13-13 28-23 28-41 0-18-10-30-30-30z' fill='%2322C55E'/%3E%3Ccircle cx='50' cy='38' r='7' fill='%23fff'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Manrope', 'ui-sans-serif', 'system-ui'],
+            serif: ['"Instrument Serif"', 'ui-serif', 'serif'],
+          },
+          colors: {
+            ink:    { DEFAULT: '#0F172A', 2: '#334155', 3: '#64748B' },
+            line:   { DEFAULT: '#E2E8F0', 2: '#F1F5F9' },
+            brand:  { 25: '#F0FDF4', 50: '#DCFCE7', DEFAULT: '#22C55E', 600: '#16A34A', 700: '#15803D', 800: '#166534', 900: '#052E16' },
+            accent: { 50: '#FFF0E0', DEFAULT: '#FF7A00' },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { font-family: 'Manrope', system-ui, sans-serif; background: #F8FAFC; color: #0F172A; }
+    .serif { font-family: 'Instrument Serif', serif; font-style: italic; }
+    /* fruit tile */
+    .ft { position: relative; border-radius: 10px; overflow: hidden; }
+    .ft::before { content:''; position: absolute; inset: 0;
+      background: radial-gradient(120% 80% at 30% 25%, rgba(255,255,255,.55), rgba(255,255,255,0) 55%); }
+    .ft .blob { position: absolute; inset: 20%; border-radius: 50%;
+      box-shadow: inset -8px -10px 20px rgba(0,0,0,.12), inset 6px 8px 14px rgba(255,255,255,.4); }
+    .scroll-shadow { background: linear-gradient(#fff 30%, rgba(255,255,255,0)), linear-gradient(rgba(255,255,255,0), #fff 70%) 0 100%,
+      radial-gradient(50% 50% at 50% 0%, rgba(0,0,0,.08), rgba(0,0,0,0)),
+      radial-gradient(50% 50% at 50% 100%, rgba(0,0,0,.08), rgba(0,0,0,0)) 0 100%;
+      background-repeat: no-repeat; background-size: 100% 24px, 100% 24px, 100% 6px, 100% 6px; background-attachment: local, local, scroll, scroll; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+  <script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
