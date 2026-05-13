@@ -345,12 +345,12 @@ async function deleteCoupon(req, res) {
 
 // ─── Categories ────────────────────────────────────────────
 const categoryUpsertSchema = z.object({
-  slug: z.string().min(2).max(80),
-  name: z.string().min(2).max(120),
+  slug: z.string().min(1).max(80),
+  name: z.string().min(1).max(120),
   fruitKind: z.string().default('apple'),
   position: z.number().int().default(0),
   isActive: z.boolean().default(true),
-  imageUrl: z.string().url().nullish(),
+  imageUrl: z.string().nullish(),
 });
 
 async function listCategoriesAdmin(_req, res) {
@@ -376,10 +376,10 @@ async function updateCategory(req, res) {
   const r = await query(
     `UPDATE categories
         SET slug = $1, name = $2, fruit_kind = $3, position = $4, is_active = $5,
-            image_url = COALESCE($6, image_url),
+            image_url = $6,
             updated_at = now()
       WHERE id = $7`,
-    [c.slug, c.name, c.fruitKind, c.position, c.isActive, c.imageUrl ?? null, id]
+    [c.slug, c.name, c.fruitKind, c.position, c.isActive, c.imageUrl || null, id]
   );
   if (!r.rowCount) throw ApiError.notFound('category_not_found');
   res.json({ ok: true });
