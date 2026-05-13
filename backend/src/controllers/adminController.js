@@ -11,7 +11,7 @@ const ApiError = require('../utils/ApiError');
 // ─── Auth ──────────────────────────────────────────────────
 const loginSchema = z.object({
   username: z.string().min(2).max(80),
-  password: z.string().min(4).max(120),
+  password: z.string().min(1).max(120),
 });
 
 async function login(req, res) {
