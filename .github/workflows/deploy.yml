@@ -1,0 +1,23 @@
+name: Deploy backend on push to main
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  trigger-server-pull:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify server (best-effort)
+        # The server polls origin/main once a minute via systemd anyway, so this
+        # workflow is purely a "deploy now" trigger. It hits a webhook on the
+        # server which short-circuits the poller.
+        run: |
+          if [ -n "${{ secrets.DEPLOY_WEBHOOK_URL }}" ]; then
+            curl -fsS -X POST "${{ secrets.DEPLOY_WEBHOOK_URL }}" \
+              -H "X-Deploy-Token: ${{ secrets.DEPLOY_WEBHOOK_TOKEN }}" \
+              -H 'Content-Type: application/json' \
+              -d "{\"sha\":\"$GITHUB_SHA\"}" || true
+          else
+            echo "DEPLOY_WEBHOOK_URL not set; skipping webhook. Server will poll within 60s."
+          fi

@@ -2,6 +2,7 @@
 
 const { z } = require('zod');
 const { query } = require('../db/pool');
+const { cached, cacheDelByPrefix } = require('../services/cacheService');
 const ApiError = require('../utils/ApiError');
 
 function mapProduct(row) {
@@ -29,6 +30,7 @@ function mapProduct(row) {
     pickedAt: row.picked_at,
     nutrition: row.nutrition,
     packOptions: row.pack_options,
+    imageUrl: row.image_url || null,
   };
 }
 
@@ -94,28 +96,38 @@ async function getProduct(req, res) {
 }
 
 async function homeFeed(_req, res) {
-  const banners = await query(
-    `SELECT id, title, subtitle, tag, fruit_kind, gradient, cta_label, cta_target
-       FROM banners WHERE is_active = true ORDER BY position ASC`
-  );
-  const bestsellers = await query(
-    `SELECT * FROM products WHERE is_bestseller = true ORDER BY review_count DESC LIMIT 8`
-  );
-  const trending = await query(
-    `SELECT * FROM products WHERE is_trending = true ORDER BY rating DESC LIMIT 8`
-  );
-  const recommended = await query(
-    `SELECT * FROM products ORDER BY random() LIMIT 8`
-  );
+  // Cache the heavy join+random pass for 30s. Cache key is global because
+  // the public home feed is identical for every anonymous client.
+  const payload = await cached('home:feed:v2', 30, async () => {
+    const banners = await query(
+      `SELECT id, title, subtitle, tag, fruit_kind, gradient, cta_label, cta_target
+         FROM banners WHERE is_active = true ORDER BY position ASC`
+    );
+    const bestsellers = await query(
+      `SELECT * FROM products WHERE is_bestseller = true ORDER BY review_count DESC LIMIT 8`
+    );
+    const trending = await query(
+      `SELECT * FROM products WHERE is_trending = true ORDER BY rating DESC LIMIT 8`
+    );
+    const recommended = await query(
+      `SELECT * FROM products ORDER BY random() LIMIT 8`
+    );
+    return {
+      banners: banners.rows.map((b) => ({
+        id: b.id, title: b.title, subtitle: b.subtitle, tag: b.tag,
+        fruitKind: b.fruit_kind, gradient: b.gradient, ctaLabel: b.cta_label, ctaTarget: b.cta_target,
+      })),
+      bestsellers: bestsellers.rows.map(mapProduct),
+      trending: trending.rows.map(mapProduct),
+      recommended: recommended.rows.map(mapProduct),
+    };
+  });
 
   res.json({
-    banners: banners.rows.map((b) => ({
-      id: b.id, title: b.title, subtitle: b.subtitle, tag: b.tag,
-      fruitKind: b.fruit_kind, gradient: b.gradient, ctaLabel: b.cta_label, ctaTarget: b.cta_target,
-    })),
-    bestsellers: bestsellers.rows.map(mapProduct),
-    trending: trending.rows.map(mapProduct),
-    recommended: recommended.rows.map(mapProduct),
+    banners: payload.banners,
+    bestsellers: payload.bestsellers,
+    trending: payload.trending,
+    recommended: payload.recommended,
     aiPick: {
       title: 'Boost your morning iron',
       subtitle: 'Based on your last 12 orders + iron-rich profile',
@@ -124,6 +136,13 @@ async function homeFeed(_req, res) {
     },
   });
 }
+
+/** Called from admin product mutations to bust the home-feed cache. */
+function invalidateCatalogCache() {
+  cacheDelByPrefix('home:feed');
+}
+
+module.exports.invalidateCatalogCache = invalidateCatalogCache;
 
 const searchSchema = z.object({ q: z.string().min(1).max(80) });
 

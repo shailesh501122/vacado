@@ -170,11 +170,23 @@ async function updateOrderStatus(req, res) {
 }
 
 // ─── Products ──────────────────────────────────────────────
-async function listProducts(_req, res) {
+async function listProducts(req, res) {
+  // Vendors only see their own products; admins/superadmins see everything.
+  const params = [];
+  let where = '';
+  if (req.admin.role === 'vendor') {
+    const vRes = await query('SELECT id FROM vendors WHERE admin_id = $1 LIMIT 1', [req.admin.id]);
+    const vendorId = vRes.rows[0]?.id;
+    if (!vendorId) return res.json({ products: [] });
+    params.push(vendorId);
+    where = 'WHERE products.vendor_id = $1';
+  }
   const { rows } = await query(
     `SELECT products.*, categories.name AS category_name
        FROM products LEFT JOIN categories ON categories.id = products.category_id
-      ORDER BY products.created_at DESC`
+      ${where}
+      ORDER BY products.created_at DESC`,
+    params
   );
   res.json({
     products: rows.map((p) => ({
@@ -183,6 +195,7 @@ async function listProducts(_req, res) {
       pricePaise: p.price_paise, mrpPaise: p.mrp_paise, stock: p.stock,
       rating: Number(p.rating), reviewCount: p.review_count, etaMinutes: p.eta_minutes,
       isOrganic: p.is_organic, isTrending: p.is_trending, isBestseller: p.is_bestseller,
+      imageUrl: p.image_url, vendorId: p.vendor_id,
       updatedAt: p.updated_at,
     })),
   });
@@ -203,19 +216,30 @@ const productUpsertSchema = z.object({
   isOrganic: z.boolean().default(false),
   isTrending: z.boolean().default(false),
   isBestseller: z.boolean().default(false),
+  imageUrl: z.string().url().nullish(),
 });
+
+async function _resolveVendorId(req) {
+  if (req.admin.role !== 'vendor') return null;
+  const { rows } = await query('SELECT id FROM vendors WHERE admin_id = $1 LIMIT 1', [req.admin.id]);
+  if (!rows[0]) throw ApiError.forbidden('no_vendor_profile');
+  return rows[0].id;
+}
 
 async function createProduct(req, res) {
   const p = req.body;
+  const vendorId = await _resolveVendorId(req);
   const { rows } = await query(
     `INSERT INTO products
       (slug, name, description, category_id, fruit_kind, origin, weight_label,
-       price_paise, mrp_paise, stock, eta_minutes, is_organic, is_trending, is_bestseller)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+       price_paise, mrp_paise, stock, eta_minutes, is_organic, is_trending, is_bestseller,
+       image_url, vendor_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
      RETURNING id`,
     [p.slug, p.name, p.description || null, p.categoryId || null, p.fruitKind, p.origin || null,
      p.weightLabel, p.pricePaise, p.mrpPaise || null, p.stock, p.etaMinutes,
-     p.isOrganic, p.isTrending, p.isBestseller]
+     p.isOrganic, p.isTrending, p.isBestseller,
+     p.imageUrl || null, vendorId]
   );
   res.status(201).json({ id: rows[0].id });
 }
@@ -223,15 +247,24 @@ async function createProduct(req, res) {
 async function updateProduct(req, res) {
   const { id } = req.params;
   const p = req.body;
+  // Vendors may only edit their own products.
+  if (req.admin.role === 'vendor') {
+    const vendorId = await _resolveVendorId(req);
+    const owned = await query('SELECT id FROM products WHERE id = $1 AND vendor_id = $2', [id, vendorId]);
+    if (!owned.rows[0]) throw ApiError.forbidden('not_your_product');
+  }
   const r = await query(
     `UPDATE products
         SET slug = $1, name = $2, description = $3, category_id = $4, fruit_kind = $5, origin = $6,
             weight_label = $7, price_paise = $8, mrp_paise = $9, stock = $10, eta_minutes = $11,
-            is_organic = $12, is_trending = $13, is_bestseller = $14, updated_at = now()
-      WHERE id = $15`,
+            is_organic = $12, is_trending = $13, is_bestseller = $14,
+            image_url = COALESCE($15, image_url),
+            updated_at = now()
+      WHERE id = $16`,
     [p.slug, p.name, p.description || null, p.categoryId || null, p.fruitKind, p.origin || null,
      p.weightLabel, p.pricePaise, p.mrpPaise || null, p.stock, p.etaMinutes,
-     p.isOrganic, p.isTrending, p.isBestseller, id]
+     p.isOrganic, p.isTrending, p.isBestseller,
+     p.imageUrl ?? null, id]
   );
   if (!r.rowCount) throw ApiError.notFound('product_not_found');
   res.json({ ok: true });
@@ -239,9 +272,22 @@ async function updateProduct(req, res) {
 
 async function deleteProduct(req, res) {
   const { id } = req.params;
+  if (req.admin.role === 'vendor') {
+    const vendorId = await _resolveVendorId(req);
+    const owned = await query('SELECT id FROM products WHERE id = $1 AND vendor_id = $2', [id, vendorId]);
+    if (!owned.rows[0]) throw ApiError.forbidden('not_your_product');
+  }
   const r = await query(`DELETE FROM products WHERE id = $1`, [id]);
   if (!r.rowCount) throw ApiError.notFound('product_not_found');
   res.json({ ok: true });
+}
+
+// File upload endpoint: returns the absolute URL the admin UI then saves into a product.
+async function uploadProductImage(req, res) {
+  if (!req.file) throw ApiError.badRequest('no_file_uploaded');
+  const { publicUrlFor } = require('../services/uploadService');
+  const url = publicUrlFor(req, req.file.filename);
+  res.json({ url, filename: req.file.filename, size: req.file.size, mimeType: req.file.mimetype });
 }
 
 // ─── Customers ─────────────────────────────────────────────

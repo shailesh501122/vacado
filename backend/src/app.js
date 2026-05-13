@@ -36,6 +36,13 @@ app.use(config.apiPrefix, limiter);
 
 app.use(config.apiPrefix, routes);
 
+// Static uploads (product images etc.)
+const uploadsPath = path.resolve(__dirname, '../uploads');
+app.use('/uploads', express.static(uploadsPath, {
+  maxAge: '7d',
+  immutable: true,
+}));
+
 // Static admin SPA — single-page React app served from /admin
 const adminPath = path.resolve(__dirname, '../public/admin');
 app.use('/admin', express.static(adminPath, { extensions: ['html'] }));

@@ -1,17 +1,23 @@
-// Vacado Admin · single-file React SPA
-const { useState, useEffect, useCallback, useMemo, createContext, useContext } = React;
+// Vacado Admin · role-aware single-page React SPA
+const { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext } = React;
 
 // ─── API client ───────────────────────────────────────────
 const API = '/api/v1';
 const TOKEN_KEY = 'vacado_admin_token';
 
-async function api(path, { method = 'GET', body, token } = {}) {
+async function api(path, { method = 'GET', body, token, multipart } = {}) {
   const headers = { 'Accept': 'application/json' };
-  if (body) headers['Content-Type'] = 'application/json';
+  let payload;
+  if (multipart) {
+    payload = body;
+  } else if (body) {
+    headers['Content-Type'] = 'application/json';
+    payload = JSON.stringify(body);
+  }
   const t = token || localStorage.getItem(TOKEN_KEY);
   if (t) headers.Authorization = `Bearer ${t}`;
 
-  const res = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const res = await fetch(API + path, { method, headers, body: payload });
   const ct = res.headers.get('content-type') || '';
   const data = ct.includes('application/json') ? await res.json() : await res.text();
   if (!res.ok) {
@@ -38,7 +44,12 @@ const FRUIT = {
   dragonfruit:{t:'#FFD9EC',b:'#EC4899'}, papaya:{t:'#FFE0CC',b:'#F97316'},
 };
 
-function FruitTile({ kind = 'apple', size = 40 }) {
+function FruitTile({ kind = 'apple', size = 40, imageUrl }) {
+  if (imageUrl) {
+    return (
+      <img src={imageUrl} alt="" style={{ width: size, height: size, borderRadius: 10, objectFit: 'cover' }} />
+    );
+  }
   const p = FRUIT[kind] || FRUIT.apple;
   return (
     <div className="ft" style={{ width: size, height: size, background: p.t }}>
@@ -62,7 +73,6 @@ function StatusPill({ status }) {
 
 // ─── Auth context ────────────────────────────────────────
 const AuthCtx = createContext(null);
-
 function useAuth() { return useContext(AuthCtx); }
 
 function AuthProvider({ children }) {
@@ -110,7 +120,7 @@ function Login() {
           </div>
           <div>
             <div className="serif text-3xl leading-none">vacado</div>
-            <div className="text-xs font-bold tracking-widest text-brand-700 uppercase">admin console</div>
+            <div className="text-xs font-bold tracking-widest text-brand-700 uppercase">control panel</div>
           </div>
         </div>
 
@@ -131,8 +141,10 @@ function Login() {
           <button disabled={busy} className="w-full bg-brand text-white font-bold py-3 rounded-xl shadow-md shadow-brand/40 disabled:opacity-60">
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
-          <div className="text-[11px] text-ink-3 text-center">
-            Default: <code className="text-ink font-semibold">Admin</code> · <code className="text-ink font-semibold">Admin@123</code>
+          <div className="text-[11px] text-ink-3 text-center space-y-1">
+            <div>Admin · <code className="text-ink font-semibold">Admin / Admin@123</code></div>
+            <div>Vendor · <code className="text-ink font-semibold">vendor / vendor</code></div>
+            <div>Delivery · <code className="text-ink font-semibold">boy / boy</code></div>
           </div>
         </form>
       </div>
@@ -141,7 +153,7 @@ function Login() {
 }
 
 // ─── Shell ───────────────────────────────────────────────
-const NAV = [
+const ADMIN_NAV = [
   { k: 'dashboard', label: 'Dashboard', icon: 'M4 13h6V4H4v9zm0 7h6v-5H4v5zm10 0h6V11h-6v9zm0-16v5h6V4h-6z' },
   { k: 'orders',    label: 'Orders',    icon: 'M3 7l4-3h10l4 3v3H3V7zm0 5h18v9H3v-9zm6 0v6h6v-6' },
   { k: 'products',  label: 'Products',  icon: 'M3 3h18v6H3V3zm0 8h8v10H3V11zm10 0h8v10h-8V11z' },
@@ -151,18 +163,54 @@ const NAV = [
   { k: 'settings',  label: 'Settings',  icon: 'M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3h0a1.7 1.7 0 001-1.5V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8v0a1.7 1.7 0 001.5 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.5 1z' },
 ];
 
+const VENDOR_NAV = [
+  { k: 'vendor-dashboard', label: 'Dashboard', icon: 'M4 13h6V4H4v9zm0 7h6v-5H4v5zm10 0h6V11h-6v9zm0-16v5h6V4h-6z' },
+  { k: 'products',         label: 'My products', icon: 'M3 3h18v6H3V3zm0 8h8v10H3V11zm10 0h8v10h-8V11z' },
+  { k: 'vendor-orders',    label: 'Orders',     icon: 'M3 7l4-3h10l4 3v3H3V7zm0 5h18v9H3v-9zm6 0v6h6v-6' },
+  { k: 'settings',         label: 'Settings',   icon: 'M19.4 15a1.7 1.7 0 00.3 1.8z' },
+];
+
+const RIDER_NAV = [
+  { k: 'rider-dashboard', label: 'Dashboard', icon: 'M4 13h6V4H4v9zm0 7h6v-5H4v5zm10 0h6V11h-6v9zm0-16v5h6V4h-6z' },
+  { k: 'rider-orders',    label: 'Deliveries', icon: 'M3 7h11v8a2 2 0 01-2 2H3V7zm11 4h4l3 4v2h-7v-6z' },
+  { k: 'settings',        label: 'Settings',   icon: 'M19.4 15a1.7 1.7 0 00.3 1.8z' },
+];
+
+function navFor(role) {
+  if (role === 'vendor') return VENDOR_NAV;
+  if (role === 'rider')  return RIDER_NAV;
+  return ADMIN_NAV;
+}
+
+function defaultPageFor(role) {
+  if (role === 'vendor') return 'vendor-dashboard';
+  if (role === 'rider')  return 'rider-dashboard';
+  return 'dashboard';
+}
+
 function Shell() {
   const { admin, logout } = useAuth();
-  const [page, setPage] = useState('dashboard');
+  const [page, setPage] = useState(defaultPageFor(admin?.role));
+  const nav = useMemo(() => navFor(admin?.role), [admin?.role]);
 
   const Page = useMemo(() => ({
-    dashboard: Dashboard, orders: Orders, products: Products,
-    customers: Customers, coupons: Coupons, firebase: FirebaseSettings, settings: Settings,
-  })[page] || Dashboard, [page]);
+    dashboard:        Dashboard,
+    orders:           Orders,
+    products:         Products,
+    customers:        Customers,
+    coupons:          Coupons,
+    firebase:         FirebaseSettings,
+    settings:         Settings,
+    'vendor-dashboard': VendorDashboard,
+    'vendor-orders':    VendorOrders,
+    'rider-dashboard':  RiderDashboard,
+    'rider-orders':     RiderOrders,
+  })[page] || Settings, [page]);
+
+  const roleLabel = { superadmin: 'Super admin', admin: 'Admin', vendor: 'Vendor', rider: 'Delivery' }[admin?.role] || admin?.role;
 
   return (
     <div className="min-h-screen flex">
-      {/* Sidebar */}
       <aside className="w-60 shrink-0 bg-white border-r border-line-2 flex flex-col">
         <div className="px-5 py-5 flex items-center gap-3 border-b border-line-2">
           <div className="w-9 h-9 rounded-lg bg-brand grid place-items-center text-white">
@@ -170,11 +218,11 @@ function Shell() {
           </div>
           <div>
             <div className="serif text-xl leading-none">vacado</div>
-            <div className="text-[10px] tracking-widest font-bold text-ink-3 uppercase">admin</div>
+            <div className="text-[10px] tracking-widest font-bold text-ink-3 uppercase">{roleLabel}</div>
           </div>
         </div>
         <nav className="flex-1 p-3 space-y-1">
-          {NAV.map((n) => {
+          {nav.map((n) => {
             const active = n.k === page;
             return (
               <button key={n.k} onClick={() => setPage(n.k)}
@@ -199,7 +247,6 @@ function Shell() {
         </div>
       </aside>
 
-      {/* Main */}
       <main className="flex-1 min-w-0 overflow-y-auto">
         <div className="px-8 py-7"><Page /></div>
       </main>
@@ -207,7 +254,7 @@ function Shell() {
   );
 }
 
-// ─── Dashboard ───────────────────────────────────────────
+// ─── Dashboard (super/admin) ──────────────────────────────
 function Dashboard() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
@@ -295,7 +342,7 @@ function Stat({ label, value, sub, accent = 'brand' }) {
   );
 }
 
-// ─── Orders ─────────────────────────────────────────────
+// ─── Orders (admin) ──────────────────────────────────────
 function Orders() {
   const [list, setList] = useState(null);
   const [filter, setFilter] = useState('');
@@ -334,7 +381,7 @@ function Orders() {
               {list.map((o) => (
                 <tr key={o.id} onClick={() => setOpen(o.id)} className="border-b border-line-2 last:border-0 cursor-pointer hover:bg-line-2/50">
                   <td className="px-4 py-3 font-bold">{o.orderNumber}</td>
-                  <td><div className="text-sm font-semibold">{o.customer.name || '—'}</div><div className="text-[11px] text-ink-3">{o.customer.phone}</div></td>
+                  <td><div className="text-sm font-semibold">{o.customer?.name || '—'}</div><div className="text-[11px] text-ink-3">{o.customer?.phone}</div></td>
                   <td><StatusPill status={o.status} /></td>
                   <td className="text-xs"><div className="font-bold uppercase">{o.paymentMethod}</div><div className="text-ink-3">{o.paymentStatus}</div></td>
                   <td className="text-right font-bold">{rupees(o.totalPaise)}</td>
@@ -378,7 +425,7 @@ function OrderModal({ id, onClose, onChanged }) {
             </div>
             <div className="p-6 space-y-5">
               <div className="grid grid-cols-2 gap-4">
-                <Card><CardHeader title="Customer" /><div className="font-bold">{order.customer.name || '—'}</div><div className="text-sm text-ink-3">{order.customer.phone}</div></Card>
+                <Card><CardHeader title="Customer" /><div className="font-bold">{order.customer?.name || '—'}</div><div className="text-sm text-ink-3">{order.customer?.phone}</div></Card>
                 <Card><CardHeader title="Rider" />
                   {order.rider ? <><div className="font-bold">{order.rider.name}</div><div className="text-sm text-ink-3">{order.rider.phone} · {order.rider.vehicle}</div></>
                                : <div className="text-sm text-ink-3">Not yet assigned</div>}
@@ -434,9 +481,10 @@ function OrderModal({ id, onClose, onChanged }) {
 
 // ─── Products ───────────────────────────────────────────
 function Products() {
+  const { admin } = useAuth();
   const [list, setList] = useState(null);
   const [q, setQ] = useState('');
-  const [edit, setEdit] = useState(null); // { id?, ...fields }
+  const [edit, setEdit] = useState(null);
 
   const load = () => api('/admin/products').then((d) => setList(d.products));
   useEffect(() => { load(); }, []);
@@ -452,12 +500,16 @@ function Products() {
     await api(`/admin/products/${id}`, { method: 'DELETE' }); load();
   };
 
+  const isVendor = admin?.role === 'vendor';
+  const titleEyebrow = isVendor ? 'inventory' : 'catalog';
+  const title = isVendor ? 'My products' : 'Products';
+
   return (
     <div className="space-y-6">
       <header className="flex items-end justify-between">
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-widest text-brand-700">catalog</div>
-          <h1 className="serif text-4xl">Products</h1>
+          <div className="text-[11px] font-bold uppercase tracking-widest text-brand-700">{titleEyebrow}</div>
+          <h1 className="serif text-4xl">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search products…"
@@ -466,7 +518,7 @@ function Products() {
         </div>
       </header>
 
-      {!filtered ? <Loader /> : filtered.length === 0 ? <Empty label="No products" /> : (
+      {!filtered ? <Loader /> : filtered.length === 0 ? <Empty label="No products yet — add your first one." /> : (
         <Card noPad>
           <table className="w-full text-sm">
             <thead className="text-[10px] uppercase tracking-wide text-ink-3 bg-line-2">
@@ -476,7 +528,7 @@ function Products() {
               {filtered.map((p) => (
                 <tr key={p.id} className="border-b border-line-2 last:border-0">
                   <td className="px-4 py-3 flex items-center gap-3">
-                    <FruitTile kind={p.fruitKind} size={40} />
+                    <FruitTile kind={p.fruitKind} size={40} imageUrl={p.imageUrl} />
                     <div>
                       <div className="font-bold">{p.name}</div>
                       <div className="text-[11px] text-ink-3">{p.slug} · {p.weightLabel}</div>
@@ -506,6 +558,8 @@ function ProductForm({ initial, onClose, onSaved }) {
   const [cats, setCats] = useState([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
   const isEdit = !!initial.id;
 
   const [f, setF] = useState({
@@ -523,22 +577,42 @@ function ProductForm({ initial, onClose, onSaved }) {
     isOrganic: !!initial.isOrganic,
     isTrending: !!initial.isTrending,
     isBestseller: !!initial.isBestseller,
+    imageUrl: initial.imageUrl || '',
   });
 
   useEffect(() => { api('/admin/categories').then((d) => setCats(d.categories)); }, []);
+
+  const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
+
+  const onPickFile = () => fileRef.current?.click();
+  const onFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 6 * 1024 * 1024) { setErr('Image must be under 6 MB'); return; }
+    setUploading(true); setErr(null);
+    try {
+      const fd = new FormData(); fd.append('image', file);
+      const r = await api('/admin/products/image', { method: 'POST', body: fd, multipart: true });
+      set('imageUrl', r.url);
+    } catch (e2) { setErr(`Upload failed: ${e2.message}`); }
+    finally { setUploading(false); e.target.value = ''; }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true); setErr(null);
     try {
-      const body = { ...f, mrpPaise: f.mrpPaise || null, categoryId: f.categoryId || null };
+      const body = {
+        ...f,
+        mrpPaise: f.mrpPaise || null,
+        categoryId: f.categoryId || null,
+        imageUrl: f.imageUrl || null,
+      };
       if (isEdit) await api(`/admin/products/${initial.id}`, { method: 'PUT', body });
       else        await api('/admin/products', { method: 'POST', body });
       onSaved();
     } catch (e) { setErr(e.message); } finally { setBusy(false); }
   };
-
-  const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
 
   return (
     <div className="fixed inset-0 bg-ink/40 backdrop-blur-sm z-40 grid place-items-center p-6" onClick={onClose}>
@@ -548,6 +622,29 @@ function ProductForm({ initial, onClose, onSaved }) {
           <button type="button" onClick={onClose} className="w-9 h-9 rounded-lg hover:bg-line-2 grid place-items-center">×</button>
         </div>
         <div className="p-6 space-y-4">
+          {/* Image */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wide text-ink-3 mb-2">Image</div>
+            <div className="flex items-center gap-4">
+              <div className="w-24 h-24 rounded-xl border border-line-2 bg-line-2 grid place-items-center overflow-hidden">
+                {f.imageUrl
+                  ? <img src={f.imageUrl} className="w-full h-full object-cover" alt="" />
+                  : <FruitTile kind={f.fruitKind} size={70} />}
+              </div>
+              <div className="flex-1">
+                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={onFileChange} />
+                <button type="button" onClick={onPickFile} disabled={uploading}
+                  className="px-4 py-2 rounded-lg border border-line text-sm font-bold hover:bg-line-2 disabled:opacity-60">
+                  {uploading ? 'Uploading…' : (f.imageUrl ? 'Replace image' : 'Upload image')}
+                </button>
+                {f.imageUrl && (
+                  <button type="button" onClick={() => set('imageUrl', '')} className="ml-2 text-xs font-bold text-rose-700 hover:underline">Remove</button>
+                )}
+                <div className="text-[11px] text-ink-3 mt-2">JPEG / PNG / WebP, up to 6 MB. Falls back to the fruit tile if blank.</div>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Field label="Slug" value={f.slug} onChange={(v) => set('slug', v)} required />
             <Field label="Name" value={f.name} onChange={(v) => set('name', v)} required />
@@ -686,40 +783,178 @@ function CouponForm({ onClose, onSaved }) {
   );
 }
 
-// ─── Settings ──────────────────────────────────────────
-function Settings() {
-  const { admin } = useAuth();
+// ─── Vendor dashboard ──────────────────────────────────
+function VendorDashboard() {
+  const [stats, setStats] = useState(null);
+  const [me, setMe] = useState(null);
+
+  useEffect(() => {
+    Promise.all([api('/vendor/stats'), api('/vendor/me')])
+      .then(([s, v]) => { setStats(s); setMe(v.vendor); })
+      .catch((e) => console.error(e));
+  }, []);
+
+  if (!stats) return <Loader />;
+
   return (
     <div className="space-y-6">
-      <header><div className="text-[11px] font-bold uppercase tracking-widest text-brand-700">account</div><h1 className="serif text-4xl">Settings</h1></header>
+      <header>
+        <div className="text-[11px] font-bold uppercase tracking-widest text-brand-700">vendor</div>
+        <h1 className="serif text-4xl">{me?.storeName || 'Vendor dashboard'}</h1>
+        <p className="text-sm text-ink-3 mt-1">{me?.storeCity} · {me?.storePhone}</p>
+      </header>
+
+      <div className="grid grid-cols-4 gap-4">
+        <Stat label="Products"    value={stats.products} accent="brand"  sub={`${stats.lowStock} low stock`} />
+        <Stat label="Orders"      value={stats.orders}   accent="accent" />
+        <Stat label="Revenue"     value={rupees(stats.revenuePaise)} accent="brand" />
+        <Stat label="Low stock"   value={stats.lowStock} accent="accent" sub="Products under 10 units" />
+      </div>
+
       <Card>
-        <CardHeader title="Admin account" />
-        <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
-          <KV label="Username" value={admin?.username} />
-          <KV label="Name" value={admin?.name} />
-          <KV label="Role" value={admin?.role} />
-          <KV label="Admin ID" value={admin?.id} mono />
-        </div>
-      </Card>
-      <Card>
-        <CardHeader title="System" />
-        <ul className="text-sm space-y-1.5 mt-3">
-          <li className="text-ink-3">API base: <code className="text-ink font-bold">{location.origin}/api/v1</code></li>
-          <li className="text-ink-3">Admin URL: <code className="text-ink font-bold">{location.origin}/admin</code></li>
-          <li className="text-ink-3">Build: <code className="text-ink font-bold">single-file SPA · React 18 (UMD) · Tailwind CDN</code></li>
-        </ul>
+        <CardHeader title="Recent orders" subtitle="Containing your products" />
+        {stats.recentOrders.length === 0 ? <Empty label="No orders yet." /> : (
+          <table className="w-full text-sm mt-2">
+            <thead className="text-[10px] uppercase tracking-wide text-ink-3">
+              <tr className="border-b border-line-2"><th className="text-left py-2">Order</th><th className="text-left">Customer</th><th className="text-left">Status</th><th className="text-right">Total</th><th className="text-right">Placed</th></tr>
+            </thead>
+            <tbody>
+              {stats.recentOrders.map((o) => (
+                <tr key={o.id} className="border-b border-line-2 last:border-0">
+                  <td className="py-3 font-bold">{o.orderNumber}</td>
+                  <td>{o.customer.name || o.customer.phone || '—'}</td>
+                  <td><StatusPill status={o.status} /></td>
+                  <td className="text-right font-bold">{rupees(o.totalPaise)}</td>
+                  <td className="text-right text-ink-3">{fmtDate(o.placedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </Card>
     </div>
   );
 }
 
-// ─── Firebase config ──────────────────────────────────
+function VendorOrders() {
+  const [list, setList] = useState(null);
+  useEffect(() => { api('/vendor/orders').then((d) => setList(d.orders)); }, []);
+  return (
+    <div className="space-y-6">
+      <header><div className="text-[11px] font-bold uppercase tracking-widest text-brand-700">vendor</div><h1 className="serif text-4xl">Orders</h1></header>
+      {!list ? <Loader /> : list.length === 0 ? <Empty label="No orders yet." /> : (
+        <Card noPad>
+          <table className="w-full text-sm">
+            <thead className="text-[10px] uppercase tracking-wide text-ink-3 bg-line-2">
+              <tr><th className="text-left px-4 py-3">Order</th><th className="text-left">Customer</th><th className="text-left">Status</th><th className="text-right">Total</th><th className="text-right pr-4">Placed</th></tr>
+            </thead>
+            <tbody>
+              {list.map((o) => (
+                <tr key={o.id} className="border-b border-line-2 last:border-0">
+                  <td className="px-4 py-3 font-bold">{o.orderNumber}</td>
+                  <td><div className="text-sm font-semibold">{o.customer.name || '—'}</div><div className="text-[11px] text-ink-3">{o.customer.phone}</div></td>
+                  <td><StatusPill status={o.status} /></td>
+                  <td className="text-right font-bold">{rupees(o.totalPaise)}</td>
+                  <td className="text-right pr-4 text-ink-3">{fmtDate(o.placedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ─── Rider dashboard ───────────────────────────────────
+function RiderDashboard() {
+  const [me, setMe] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [orders, setOrders] = useState(null);
+
+  const load = () => Promise.all([api('/rider/me'), api('/rider/stats'), api('/rider/orders')])
+    .then(([m, s, o]) => { setMe(m.rider); setStats(s); setOrders(o.orders); });
+
+  useEffect(() => { load(); const i = setInterval(load, 10000); return () => clearInterval(i); }, []);
+
+  const toggleOnline = async () => {
+    await api('/rider/online', { method: 'POST', body: { online: !me.isOnline } });
+    load();
+  };
+
+  const claim     = (id) => api(`/rider/orders/${id}/claim`,     { method: 'POST' }).then(load);
+  const delivered = (id) => api(`/rider/orders/${id}/delivered`, { method: 'POST' }).then(load);
+
+  if (!me || !stats || !orders) return <Loader />;
+
+  return (
+    <div className="space-y-6">
+      <header className="flex items-end justify-between">
+        <div>
+          <div className="text-[11px] font-bold uppercase tracking-widest text-brand-700">delivery</div>
+          <h1 className="serif text-4xl">Hi, {me.displayName}</h1>
+          <p className="text-sm text-ink-3 mt-1">★ {Number(me.rating).toFixed(1)} · {me.deliveredCount} deliveries · {me.vehicle}</p>
+        </div>
+        <button onClick={toggleOnline}
+          className={cls('px-4 py-2 rounded-lg text-sm font-bold border',
+            me.isOnline ? 'bg-brand-25 border-brand-50 text-brand-700' : 'bg-line-2 border-line text-ink-2')}>
+          {me.isOnline ? '● Online' : '○ Offline'}
+        </button>
+      </header>
+
+      <div className="grid grid-cols-4 gap-4">
+        <Stat label="On the way" value={stats.active}          accent="accent" />
+        <Stat label="Delivered today" value={stats.deliveredToday} accent="brand" />
+        <Stat label="Total delivered" value={stats.delivered}   accent="brand" />
+        <Stat label="Rating"     value={Number(stats.rating).toFixed(1)} accent="accent" />
+      </div>
+
+      <Card>
+        <CardHeader title="Active & available orders" subtitle="Tap to claim or mark delivered" />
+        {orders.length === 0 ? <Empty label="No orders to deliver right now." /> : (
+          <div className="space-y-3 mt-3">
+            {orders.map((o) => (
+              <div key={o.id} className="border border-line-2 rounded-xl p-4 flex items-start gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2"><div className="font-bold">{o.orderNumber}</div><StatusPill status={o.status} />{o.isMine && <span className="text-[10px] font-bold uppercase tracking-wide text-brand-700">Mine</span>}</div>
+                  <div className="text-sm text-ink-2 mt-1">{o.customer.name || '—'} · {o.customer.phone}</div>
+                  {o.address && (
+                    <div className="text-xs text-ink-3 mt-1">
+                      {o.address.line1}{o.address.line2 ? `, ${o.address.line2}` : ''}, {o.address.city} {o.address.pincode}
+                    </div>
+                  )}
+                  {o.deliveryInstruction && <div className="text-[11px] text-ink-3 mt-1 italic">"{o.deliveryInstruction}"</div>}
+                </div>
+                <div className="text-right">
+                  <div className="font-black">{rupees(o.totalPaise)}</div>
+                  <div className="text-[10px] text-ink-3 uppercase font-bold">{o.paymentMethod}</div>
+                  <div className="mt-2 flex flex-col gap-2">
+                    {!o.isMine && o.status !== 'delivered' && (
+                      <button onClick={() => claim(o.id)} className="bg-brand text-white px-3 py-1.5 rounded-lg text-xs font-bold">Claim</button>
+                    )}
+                    {o.isMine && o.status !== 'delivered' && (
+                      <button onClick={() => delivered(o.id)} className="bg-brand text-white px-3 py-1.5 rounded-lg text-xs font-bold">Mark delivered</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function RiderOrders() { return <RiderDashboard />; }
+
+// ─── Firebase config (super/admin only) ────────────────
 function FirebaseSettings() {
   const [cfg, setCfg] = useState(null);
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(null);
-  const [serviceAccount, setServiceAccount] = useState(''); // raw textarea contents
+  const [serviceAccount, setServiceAccount] = useState('');
 
   const load = () => api('/admin/settings/firebase').then((d) => setCfg(d.settings)).catch((e) => setErr(e.message));
   useEffect(() => { load(); }, []);
@@ -756,10 +991,7 @@ function FirebaseSettings() {
         <div className="text-[11px] font-bold uppercase tracking-widest text-brand-700">auth</div>
         <h1 className="serif text-4xl">Firebase phone auth</h1>
         <p className="text-sm text-ink-3 mt-2 max-w-2xl">
-          Per-instance Firebase configuration. The mobile app fetches the public
-          keys at runtime and uses Firebase to send and verify SMS OTPs. The
-          backend uses the service account to verify the resulting ID tokens.
-          {' '}<a href="https://console.firebase.google.com" target="_blank" className="text-brand-700 font-bold">Firebase console ↗</a>
+          Per-instance Firebase configuration. The mobile app fetches the public keys at runtime and uses Firebase to send and verify SMS OTPs.
         </p>
       </header>
 
@@ -775,15 +1007,14 @@ function FirebaseSettings() {
         </Card>
 
         <Card>
-          <CardHeader title="Public web config" subtitle="Project settings → General → Your apps → Web/Android app" />
+          <CardHeader title="Public web config" subtitle="Project settings → General → Your apps" />
           <div className="grid grid-cols-2 gap-4 mt-3">
-            <Field label="Web API key (apiKey)" value={cfg.apiKey} onChange={(v) => set('apiKey', v)} />
-            <Field label="App ID (appId)" value={cfg.appId} onChange={(v) => set('appId', v)} />
+            <Field label="Web API key" value={cfg.apiKey} onChange={(v) => set('apiKey', v)} />
+            <Field label="App ID" value={cfg.appId} onChange={(v) => set('appId', v)} />
             <Field label="Project ID" value={cfg.projectId} onChange={(v) => set('projectId', v)} />
             <Field label="Messaging sender ID" value={cfg.messagingSenderId} onChange={(v) => set('messagingSenderId', v)} />
             <Field label="Android package" value={cfg.androidPackageName} onChange={(v) => set('androidPackageName', v)} />
             <Field label="iOS bundle ID" value={cfg.iosBundleId} onChange={(v) => set('iosBundleId', v)} />
-            <Field label="iOS app ID" value={cfg.iosAppId} onChange={(v) => set('iosAppId', v)} />
           </div>
         </Card>
 
@@ -816,16 +1047,31 @@ function FirebaseSettings() {
           </button>
         </div>
       </form>
+    </div>
+  );
+}
 
+// ─── Settings ──────────────────────────────────────────
+function Settings() {
+  const { admin } = useAuth();
+  return (
+    <div className="space-y-6">
+      <header><div className="text-[11px] font-bold uppercase tracking-widest text-brand-700">account</div><h1 className="serif text-4xl">Settings</h1></header>
       <Card>
-        <CardHeader title="Quickstart" />
-        <ol className="list-decimal pl-5 text-sm space-y-2 mt-3 text-ink-2">
-          <li>Create a Firebase project, enable <b>Phone</b> sign-in under Authentication → Sign-in method.</li>
-          <li>Add an Android app with package <code className="font-mono text-xs">{cfg.androidPackageName || 'com.vacado.app'}</code> and your SHA-1 / SHA-256. Add an iOS app with the bundle ID above.</li>
-          <li>Copy the <b>web</b> Firebase config (apiKey, appId, projectId, messagingSenderId) into the fields above.</li>
-          <li>Generate a service-account JSON and paste it below.</li>
-          <li>Flip <b>Enabled</b> on, save, and the mobile app starts using Firebase phone auth instantly.</li>
-        </ol>
+        <CardHeader title="Account" />
+        <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+          <KV label="Username" value={admin?.username} />
+          <KV label="Name" value={admin?.name} />
+          <KV label="Role" value={admin?.role} />
+          <KV label="ID" value={admin?.id} mono />
+        </div>
+      </Card>
+      <Card>
+        <CardHeader title="System" />
+        <ul className="text-sm space-y-1.5 mt-3">
+          <li className="text-ink-3">API base: <code className="text-ink font-bold">{location.origin}/api/v1</code></li>
+          <li className="text-ink-3">Admin URL: <code className="text-ink font-bold">{location.origin}/admin</code></li>
+        </ul>
       </Card>
     </div>
   );

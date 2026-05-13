@@ -1,0 +1,11 @@
+[Unit]
+Description=Vacado auto-deploy (poll main and reload on change)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/vacado
+ExecStart=/usr/bin/env bash /opt/vacado/scripts/autodeploy.sh
+StandardOutput=journal
+StandardError=journal

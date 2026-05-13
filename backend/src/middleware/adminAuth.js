@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const config = require('../config');
 const ApiError = require('../utils/ApiError');
 
+const ROLES = ['superadmin', 'admin', 'vendor', 'rider'];
+
 function signAdmin(payload) {
   return jwt.sign({ ...payload, kind: 'admin' }, config.jwt.secret, { expiresIn: '12h' });
 }
@@ -22,4 +24,15 @@ function adminRequired(req, _res, next) {
   }
 }
 
-module.exports = { signAdmin, adminRequired };
+/** Only allow the listed roles past this middleware. */
+function requireRole(...allowed) {
+  const allow = new Set(allowed);
+  return (req, _res, next) => {
+    if (!req.admin) return next(ApiError.unauthorized('not authenticated'));
+    // superadmin implicitly passes every gate.
+    if (req.admin.role === 'superadmin' || allow.has(req.admin.role)) return next();
+    return next(ApiError.forbidden(`role_required: ${[...allow].join('|')}`));
+  };
+}
+
+module.exports = { ROLES, signAdmin, adminRequired, requireRole };

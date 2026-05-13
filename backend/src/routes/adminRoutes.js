@@ -3,7 +3,8 @@
 const router = require('express').Router();
 const asyncHandler = require('../utils/asyncHandler');
 const validate = require('../middleware/validate');
-const { adminRequired } = require('../middleware/adminAuth');
+const { adminRequired, requireRole } = require('../middleware/adminAuth');
+const { upload } = require('../services/uploadService');
 const ctrl = require('../controllers/adminController');
 
 // public (login)
@@ -11,6 +12,14 @@ router.post('/login', validate(ctrl.schemas.loginSchema), asyncHandler(ctrl.logi
 
 // authenticated
 router.use(adminRequired);
+
+// Image upload (admins + vendors)
+router.post(
+  '/products/image',
+  requireRole('admin', 'vendor'),
+  upload.single('image'),
+  asyncHandler(ctrl.uploadProductImage)
+);
 
 router.get('/me',                     asyncHandler(ctrl.me));
 router.get('/stats',                  asyncHandler(ctrl.stats));

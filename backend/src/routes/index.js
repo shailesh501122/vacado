@@ -11,6 +11,8 @@ const orders = require('./orderRoutes');
 const addresses = require('./addressRoutes');
 const coupons = require('./couponRoutes');
 const admin = require('./adminRoutes');
+const vendor = require('./vendorRoutes');
+const rider = require('./riderRoutes');
 const config = require('./configRoutes');
 
 router.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
@@ -23,6 +25,8 @@ router.use('/orders',    orders);
 router.use('/addresses', addresses);
 router.use('/coupons',   coupons);
 router.use('/admin',     admin);
+router.use('/vendor',    vendor);
+router.use('/rider',     rider);
 router.use('/config',    config);
 
 module.exports = router;
