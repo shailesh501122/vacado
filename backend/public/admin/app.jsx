@@ -718,7 +718,7 @@ function Categories() {
               {list.map((c) => (
                 <tr key={c.id} className="border-b border-line-2 last:border-0">
                   <td className="px-4 py-3 flex items-center gap-3">
-                    <FruitTile kind={c.fruit_kind} size={32} />
+                    <FruitTile kind={c.fruitKind} size={32} imageUrl={c.imageUrl} />
                     <div className="font-bold">{c.name}</div>
                   </td>
                   <td className="text-ink-2 font-mono text-xs">{c.slug}</td>
@@ -747,17 +747,34 @@ function Categories() {
 function CategoryForm({ initial, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
   const isEdit = !!initial.id;
 
   const [f, setF] = useState({
     slug: initial.slug || '',
     name: initial.name || '',
-    fruitKind: initial.fruit_kind || 'apple',
+    fruitKind: initial.fruitKind || 'apple',
     position: initial.position ?? 0,
-    isActive: initial.is_active ?? true,
+    isActive: initial.isActive ?? true,
+    imageUrl: initial.imageUrl || '',
   });
 
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
+
+  const onPickFile = () => fileRef.current?.click();
+  const onFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 6 * 1024 * 1024) { setErr('Image must be under 6 MB'); return; }
+    setUploading(true); setErr(null);
+    try {
+      const fd = new FormData(); fd.append('image', file);
+      const r = await api('/admin/products/image', { method: 'POST', body: fd, multipart: true });
+      set('imageUrl', r.url);
+    } catch (e2) { setErr(`Upload failed: ${e2.message}`); }
+    finally { setUploading(false); e.target.value = ''; }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -777,6 +794,28 @@ function CategoryForm({ initial, onClose, onSaved }) {
           <button type="button" onClick={onClose} className="w-9 h-9 rounded-lg hover:bg-line-2 grid place-items-center">×</button>
         </div>
         <div className="p-6 space-y-4">
+          {/* Image */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wide text-ink-3 mb-2">Image</div>
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-xl border border-line-2 bg-line-2 grid place-items-center overflow-hidden">
+                {f.imageUrl
+                  ? <img src={f.imageUrl} className="w-full h-full object-cover" alt="" />
+                  : <FruitTile kind={f.fruitKind} size={50} />}
+              </div>
+              <div className="flex-1">
+                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={onFileChange} />
+                <button type="button" onClick={onPickFile} disabled={uploading}
+                  className="px-4 py-2 rounded-lg border border-line text-sm font-bold hover:bg-line-2 disabled:opacity-60">
+                  {uploading ? 'Uploading…' : (f.imageUrl ? 'Replace image' : 'Upload image')}
+                </button>
+                {f.imageUrl && (
+                  <button type="button" onClick={() => set('imageUrl', '')} className="ml-2 text-xs font-bold text-rose-700 hover:underline">Remove</button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <Field label="Name" value={f.name} onChange={(v) => set('name', v)} required />
           <Field label="Slug" value={f.slug} onChange={(v) => set('slug', v)} required />
           <div className="grid grid-cols-2 gap-4">

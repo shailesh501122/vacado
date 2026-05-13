@@ -350,21 +350,22 @@ const categoryUpsertSchema = z.object({
   fruitKind: z.string().default('apple'),
   position: z.number().int().default(0),
   isActive: z.boolean().default(true),
+  imageUrl: z.string().url().nullish(),
 });
 
 async function listCategoriesAdmin(_req, res) {
   const { rows } = await query(
-    `SELECT id, slug, name, fruit_kind, position, is_active FROM categories ORDER BY position ASC`
+    `SELECT id, slug, name, fruit_kind, position, is_active, image_url FROM categories ORDER BY position ASC`
   );
-  res.json({ categories: rows });
+  res.json({ categories: rows.map(r => ({ ...r, fruitKind: r.fruit_kind, isActive: r.is_active, imageUrl: r.image_url })) });
 }
 
 async function createCategory(req, res) {
   const c = req.body;
   const { rows } = await query(
-    `INSERT INTO categories (slug, name, fruit_kind, position, is_active)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-    [c.slug, c.name, c.fruitKind, c.position, c.isActive]
+    `INSERT INTO categories (slug, name, fruit_kind, position, is_active, image_url)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [c.slug, c.name, c.fruitKind, c.position, c.isActive, c.imageUrl || null]
   );
   res.status(201).json({ id: rows[0].id });
 }
@@ -375,9 +376,10 @@ async function updateCategory(req, res) {
   const r = await query(
     `UPDATE categories
         SET slug = $1, name = $2, fruit_kind = $3, position = $4, is_active = $5,
+            image_url = COALESCE($6, image_url),
             updated_at = now()
-      WHERE id = $6`,
-    [c.slug, c.name, c.fruitKind, c.position, c.isActive, id]
+      WHERE id = $7`,
+    [c.slug, c.name, c.fruitKind, c.position, c.isActive, c.imageUrl ?? null, id]
   );
   if (!r.rowCount) throw ApiError.notFound('category_not_found');
   res.json({ ok: true });

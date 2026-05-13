@@ -132,9 +132,9 @@ async function seed() {
     const catMap = {};
     for (const c of CATEGORIES) {
       const { rows } = await client.query(
-        `INSERT INTO categories (slug, name, fruit_kind, position)
-         VALUES ($1, $2, $3, $4) RETURNING id`,
-        [c.slug, c.name, c.kind, c.position]
+        `INSERT INTO categories (slug, name, fruit_kind, position, image_url)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [c.slug, c.name, c.kind, c.position, c.imageUrl || null]
       );
       catMap[c.slug] = rows[0].id;
     }
