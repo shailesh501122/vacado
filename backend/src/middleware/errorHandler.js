@@ -14,6 +14,16 @@ function errorHandler(err, req, res, next) {
       error: { code: 'validation_error', message: 'Invalid request', details: err.issues },
     });
   }
+  if (err && err.name === 'MulterError') {
+    return res.status(400).json({
+      error: { code: err.code || 'upload_error', message: err.message },
+    });
+  }
+  if (err && err.message === 'only_image_files') {
+    return res.status(400).json({
+      error: { code: 'only_image_files', message: 'Only JPEG / PNG / WebP / GIF are allowed' },
+    });
+  }
   console.error('Unhandled error:', err);
   return res.status(500).json({
     error: { code: 'internal_error', message: 'Something went wrong' },

@@ -414,6 +414,7 @@ module.exports = {
   login, me, stats,
   listOrders, getOrder, updateOrderStatus,
   listProducts, createProduct, updateProduct, deleteProduct,
+  uploadProductImage,
   listCustomers,
   listCoupons, createCoupon, deleteCoupon,
   listCategoriesAdmin,
