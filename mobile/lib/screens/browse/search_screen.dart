@@ -20,8 +20,21 @@ class _SearchScreenState extends State<SearchScreen> {
   final _ctrl = TextEditingController();
   Timer? _debounce;
   List<Product> _results = [];
-  List<String> _trending = const ['Watermelon', 'Dragon fruit', 'Sweet lime', 'Organic apples', 'Cherries, US', 'Coconut water', 'Berries box'];
-  final List<String> _recent = ['hass avocado', 'kiwi 4 pcs', 'pomegranate', 'strawberry mahabaleshwar'];
+  List<String> _trending = const [];
+  final List<String> _recent = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch trending from the backend on open so the chips reflect real data.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final r = await context.read<CatalogProvider>().search('a');
+        if (!mounted) return;
+        setState(() => _trending = (r['trending'] as List<String>));
+      } catch (_) {}
+    });
+  }
 
   @override
   void dispose() {

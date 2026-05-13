@@ -28,11 +28,21 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: VTokens.bg,
-      extendBody: true,
-      body: IndexedStack(index: _index, children: _pages),
-      bottomNavigationBar: VBottomNav(
-        activeIndex: _index,
-        onChange: (i) => setState(() => _index = i),
+      // The bottom nav is its own widget anchored at the bottom of the stack
+      // — by stacking it manually (instead of using bottomNavigationBar) we
+      // can let the new colourful header bleed under the status bar while
+      // keeping content from hiding behind the nav.
+      body: Stack(
+        children: [
+          Positioned.fill(child: IndexedStack(index: _index, children: _pages)),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: VBottomNav(
+              activeIndex: _index,
+              onChange: (i) => setState(() => _index = i),
+            ),
+          ),
+        ],
       ),
     );
   }

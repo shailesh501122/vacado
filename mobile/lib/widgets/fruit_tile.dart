@@ -1,8 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../theme/tokens.dart';
 import '../theme/app_theme.dart';
 
-/// Abstract color-tile rendering — mirrors the design's "no SVG slop" approach.
+/// Renders either a real product image (cached) or, when no image is
+/// available, an abstract fruit-color tile that mirrors the design system.
 class FruitTile extends StatelessWidget {
   final String kind;
   final double? size;
@@ -10,6 +12,8 @@ class FruitTile extends StatelessWidget {
   final double blobScale;
   final bool showCaption;
   final String? captionOverride;
+  final String? imageUrl;
+  final BoxFit fit;
 
   const FruitTile({
     super.key,
@@ -19,15 +23,54 @@ class FruitTile extends StatelessWidget {
     this.blobScale = .6,
     this.showCaption = false,
     this.captionOverride,
+    this.imageUrl,
+    this.fit = BoxFit.cover,
+  });
+
+  bool get _hasImage => imageUrl != null && imageUrl!.isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasImage) {
+      final image = ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: CachedNetworkImage(
+          imageUrl: imageUrl!,
+          fit: fit,
+          fadeInDuration: const Duration(milliseconds: 220),
+          placeholder: (_, __) => _AbstractTile(kind: kind, radius: radius, blobScale: blobScale, showCaption: false),
+          errorWidget: (_, __, ___) => _AbstractTile(kind: kind, radius: radius, blobScale: blobScale, showCaption: false),
+        ),
+      );
+      if (size != null) return SizedBox(width: size, height: size, child: image);
+      return image;
+    }
+
+    final tile = _AbstractTile(
+      kind: kind, radius: radius, blobScale: blobScale, showCaption: showCaption, captionOverride: captionOverride,
+    );
+    if (size != null) return SizedBox(width: size, height: size, child: tile);
+    return tile;
+  }
+}
+
+class _AbstractTile extends StatelessWidget {
+  final String kind;
+  final double radius;
+  final double blobScale;
+  final bool showCaption;
+  final String? captionOverride;
+  const _AbstractTile({
+    required this.kind, required this.radius, required this.blobScale,
+    this.showCaption = false, this.captionOverride,
   });
 
   @override
   Widget build(BuildContext context) {
     final p = fruitFor(kind);
-
-    final tile = LayoutBuilder(
+    return LayoutBuilder(
       builder: (ctx, c) {
-        final double w = c.maxWidth.isFinite ? c.maxWidth : (size ?? 64);
+        final double w = c.maxWidth.isFinite ? c.maxWidth : 64;
         final double blob = w * blobScale;
         return ClipRRect(
           borderRadius: BorderRadius.circular(radius),
@@ -35,7 +78,6 @@ class FruitTile extends StatelessWidget {
             color: p.tile,
             child: Stack(
               children: [
-                // highlight gradient
                 Positioned.fill(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
@@ -50,8 +92,7 @@ class FruitTile extends StatelessWidget {
                 ),
                 Center(
                   child: Container(
-                    width: blob,
-                    height: blob,
+                    width: blob, height: blob,
                     decoration: BoxDecoration(
                       color: p.blob,
                       shape: BoxShape.circle,
@@ -76,10 +117,5 @@ class FruitTile extends StatelessWidget {
         );
       },
     );
-
-    if (size != null) {
-      return SizedBox(width: size, height: size, child: tile);
-    }
-    return tile;
   }
 }

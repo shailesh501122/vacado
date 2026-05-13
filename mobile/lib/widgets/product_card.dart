@@ -31,7 +31,7 @@ class ProductCard extends StatelessWidget {
               aspectRatio: 1.05,
               child: Stack(
                 children: [
-                  Positioned.fill(child: FruitTile(kind: product.fruitKind, radius: 12, blobScale: .62)),
+                  Positioned.fill(child: FruitTile(kind: product.fruitKind, radius: 12, blobScale: .62, imageUrl: product.imageUrl)),
                   if (product.discountPercent > 0)
                     Positioned(
                       top: 6, left: 6,

@@ -18,6 +18,7 @@ class Product {
   final int stock;
   final Map<String, dynamic> nutrition;
   final List<dynamic> packOptions;
+  final String? imageUrl;
 
   const Product({
     required this.id,
@@ -39,6 +40,7 @@ class Product {
     this.origin,
     this.nutrition = const {},
     this.packOptions = const [],
+    this.imageUrl,
   });
 
   int get priceRupees => (pricePaise / 100).round();
@@ -64,6 +66,7 @@ class Product {
     stock: (j['stock'] as num?)?.toInt() ?? 100,
     nutrition: (j['nutrition'] as Map<String, dynamic>?) ?? const {},
     packOptions: (j['packOptions'] as List?) ?? const [],
+    imageUrl: j['imageUrl'] as String?,
   );
 }
 

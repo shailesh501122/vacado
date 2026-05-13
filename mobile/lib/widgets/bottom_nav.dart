@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
@@ -11,7 +10,7 @@ class VBottomNav extends StatelessWidget {
 
   static const _items = [
     (Icons.home_rounded, 'Home'),
-    (Icons.grid_view_rounded, 'Browse'),
+    (Icons.grid_view_rounded, 'Categories'),
     (Icons.shopping_bag_outlined, 'Cart'),
     (Icons.favorite_border_rounded, 'Saved'),
     (Icons.person_outline_rounded, 'Account'),
@@ -20,36 +19,50 @@ class VBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final badge = context.select<CartProvider, int>((c) => c.itemCount);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 22),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(26),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(.85),
-              borderRadius: BorderRadius.circular(26),
-              boxShadow: VTokens.shadow2,
-              border: Border.all(color: VTokens.line2),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(_items.length, (i) {
-                final active = i == activeIndex;
-                final item = _items[i];
-                return GestureDetector(
+    // Fully opaque pill anchored to the bottom safe area, with a subtle top
+    // gradient so any content scrolled underneath fades to white before it
+    // reaches the bar — content can no longer peek through.
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          colors: [Colors.white.withOpacity(0), Colors.white],
+          stops: const [0, .6],
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+      child: SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(.08), blurRadius: 30, offset: const Offset(0, 8), spreadRadius: -8),
+              BoxShadow(color: Colors.black.withOpacity(.04), blurRadius: 6,  offset: const Offset(0, 2)),
+            ],
+            border: Border.all(color: VTokens.line2),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(_items.length, (i) {
+              final active = i == activeIndex;
+              final item = _items[i];
+              return Expanded(
+                child: GestureDetector(
                   onTap: () => onChange?.call(i),
                   behavior: HitTestBehavior.opaque,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
                       color: active ? VTokens.green25 : Colors.transparent,
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: Stack(
                       clipBehavior: Clip.none,
+                      alignment: Alignment.center,
                       children: [
                         Column(
                           mainAxisSize: MainAxisSize.min,
@@ -64,7 +77,7 @@ class VBottomNav extends StatelessWidget {
                         ),
                         if (i == 2 && badge > 0)
                           Positioned(
-                            top: -2, right: -6,
+                            top: -2, right: 4,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                               constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
@@ -80,12 +93,18 @@ class VBottomNav extends StatelessWidget {
                       ],
                     ),
                   ),
-                );
-              }),
-            ),
+                ),
+              );
+            }),
           ),
         ),
       ),
     );
   }
+
+  /// Height the bar consumes including bottom safe area. Use this as the
+  /// bottom padding inside scrollable screens so the last item never hides
+  /// behind the nav.
+  static double heightFor(BuildContext context) =>
+      MediaQuery.of(context).padding.bottom + 28 + 56;
 }

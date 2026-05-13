@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/cart.dart';
+import '../../providers/address_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/tokens.dart';
@@ -15,13 +16,14 @@ class CartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartProvider>();
+    final addr = context.watch<AddressProvider>().defaultAddress;
     return SafeArea(
       bottom: false,
       child: Stack(
         children: [
           Column(
             children: [
-              _header(cart),
+              _header(cart, addr),
               Expanded(
                 child: cart.state.items.isEmpty
                   ? _empty(context)
@@ -47,7 +49,7 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Widget _header(CartProvider c) => Padding(
+  Widget _header(CartProvider c, dynamic addr) => Padding(
     padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
     child: Row(children: [
       IconBox(icon: Icons.shopping_bag_outlined),
@@ -58,7 +60,10 @@ class CartScreen extends StatelessWidget {
           children: [
             Text('Your cart', style: AppTheme.serif(size: 22, letterSpacing: -.3)),
             Padding(padding: const EdgeInsets.only(top: 1),
-              child: Text('${c.itemCount} items · delivery to Indiranagar',
+              child: Text(
+                addr == null
+                  ? '${c.itemCount} items · choose a delivery address'
+                  : '${c.itemCount} items · delivery to ${addr.tag} (${addr.city})',
                 style: const TextStyle(fontSize: 11, color: VTokens.ink3))),
           ],
         ),
