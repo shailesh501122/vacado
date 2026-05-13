@@ -344,11 +344,55 @@ async function deleteCoupon(req, res) {
 }
 
 // ─── Categories ────────────────────────────────────────────
+const categoryUpsertSchema = z.object({
+  slug: z.string().min(2).max(80),
+  name: z.string().min(2).max(120),
+  fruitKind: z.string().default('apple'),
+  position: z.number().int().default(0),
+  isActive: z.boolean().default(true),
+});
+
 async function listCategoriesAdmin(_req, res) {
   const { rows } = await query(
     `SELECT id, slug, name, fruit_kind, position, is_active FROM categories ORDER BY position ASC`
   );
   res.json({ categories: rows });
+}
+
+async function createCategory(req, res) {
+  const c = req.body;
+  const { rows } = await query(
+    `INSERT INTO categories (slug, name, fruit_kind, position, is_active)
+     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [c.slug, c.name, c.fruitKind, c.position, c.isActive]
+  );
+  res.status(201).json({ id: rows[0].id });
+}
+
+async function updateCategory(req, res) {
+  const { id } = req.params;
+  const c = req.body;
+  const r = await query(
+    `UPDATE categories
+        SET slug = $1, name = $2, fruit_kind = $3, position = $4, is_active = $5,
+            updated_at = now()
+      WHERE id = $6`,
+    [c.slug, c.name, c.fruitKind, c.position, c.isActive, id]
+  );
+  if (!r.rowCount) throw ApiError.notFound('category_not_found');
+  res.json({ ok: true });
+}
+
+async function deleteCategory(req, res) {
+  const { id } = req.params;
+  // Check if products exist in this category
+  const { rows } = await query('SELECT count(*)::int AS n FROM products WHERE category_id = $1', [id]);
+  if (rows[0].n > 0) {
+    throw ApiError.badRequest('category_not_empty', { message: 'Cannot delete category with active products' });
+  }
+  const r = await query(`DELETE FROM categories WHERE id = $1`, [id]);
+  if (!r.rowCount) throw ApiError.notFound('category_not_found');
+  res.json({ ok: true });
 }
 
 // ─── Firebase configuration ─────────────────────────────────
@@ -410,13 +454,13 @@ async function updateFirebaseSettings(req, res) {
 }
 
 module.exports = {
-  schemas: { loginSchema, productUpsertSchema, statusSchema, couponUpsertSchema, firebaseSettingsSchema },
+  schemas: { loginSchema, productUpsertSchema, statusSchema, couponUpsertSchema, firebaseSettingsSchema, categoryUpsertSchema },
   login, me, stats,
   listOrders, getOrder, updateOrderStatus,
   listProducts, createProduct, updateProduct, deleteProduct,
   uploadProductImage,
   listCustomers,
   listCoupons, createCoupon, deleteCoupon,
-  listCategoriesAdmin,
+  listCategoriesAdmin, createCategory, updateCategory, deleteCategory,
   getFirebaseSettings, updateFirebaseSettings,
 };

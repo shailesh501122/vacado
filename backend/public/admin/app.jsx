@@ -157,6 +157,7 @@ const ADMIN_NAV = [
   { k: 'dashboard', label: 'Dashboard', icon: 'M4 13h6V4H4v9zm0 7h6v-5H4v5zm10 0h6V11h-6v9zm0-16v5h6V4h-6z' },
   { k: 'orders',    label: 'Orders',    icon: 'M3 7l4-3h10l4 3v3H3V7zm0 5h18v9H3v-9zm6 0v6h6v-6' },
   { k: 'products',  label: 'Products',  icon: 'M3 3h18v6H3V3zm0 8h8v10H3V11zm10 0h8v10h-8V11z' },
+  { k: 'categories',label: 'Categories',icon: 'M4 6h16M4 12h16M4 18h16' },
   { k: 'customers', label: 'Customers', icon: 'M12 12a4 4 0 100-8 4 4 0 000 8zm-8 9a8 8 0 0116 0H4z' },
   { k: 'coupons',   label: 'Coupons',   icon: 'M3 8a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 000 4v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 000-4V8zm6-2v12' },
   { k: 'firebase',  label: 'Firebase',  icon: 'M5 18L8 3l4 6 3-3 4 12-7 3z' },
@@ -197,6 +198,7 @@ function Shell() {
     dashboard:        Dashboard,
     orders:           Orders,
     products:         Products,
+    categories:       Categories,
     customers:        Customers,
     coupons:          Coupons,
     firebase:         FirebaseSettings,
@@ -675,6 +677,120 @@ function ProductForm({ initial, onClose, onSaved }) {
           <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-line text-sm font-bold">Cancel</button>
           <button disabled={busy} className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm shadow-brand/40 disabled:opacity-60">
             {busy ? 'Saving…' : (isEdit ? 'Save changes' : 'Create product')}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ─── Categories ───────────────────────────────────────────
+function Categories() {
+  const [list, setList] = useState(null);
+  const [edit, setEdit] = useState(null);
+
+  const load = () => api('/admin/categories').then((d) => setList(d.categories));
+  useEffect(() => { load(); }, []);
+
+  const del = async (id) => {
+    if (!confirm('Delete this category? (Only works if empty)')) return;
+    try { await api(`/admin/categories/${id}`, { method: 'DELETE' }); load(); }
+    catch (e) { alert(e.message); }
+  };
+
+  return (
+    <div className="space-y-6">
+      <header className="flex items-end justify-between">
+        <div>
+          <div className="text-[11px] font-bold uppercase tracking-widest text-brand-700">catalog</div>
+          <h1 className="serif text-4xl">Categories</h1>
+        </div>
+        <button onClick={() => setEdit({})} className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm shadow-brand/40">+ New category</button>
+      </header>
+
+      {!list ? <Loader /> : list.length === 0 ? <Empty label="No categories yet." /> : (
+        <Card noPad>
+          <table className="w-full text-sm">
+            <thead className="text-[10px] uppercase tracking-wide text-ink-3 bg-line-2">
+              <tr><th className="text-left px-4 py-3">Category</th><th className="text-left">Slug</th><th className="text-right">Position</th><th className="text-left px-4">Status</th><th className="text-right pr-4">Actions</th></tr>
+            </thead>
+            <tbody>
+              {list.map((c) => (
+                <tr key={c.id} className="border-b border-line-2 last:border-0">
+                  <td className="px-4 py-3 flex items-center gap-3">
+                    <FruitTile kind={c.fruit_kind} size={32} />
+                    <div className="font-bold">{c.name}</div>
+                  </td>
+                  <td className="text-ink-2 font-mono text-xs">{c.slug}</td>
+                  <td className="text-right font-bold">{c.position}</td>
+                  <td className="px-4">
+                    <span className={cls('text-[10px] font-bold uppercase px-1.5 py-0.5 rounded', c.is_active ? 'bg-brand-50 text-brand-700' : 'bg-line-2 text-ink-3')}>
+                      {c.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="text-right pr-4">
+                    <button onClick={() => setEdit(c)} className="text-xs font-bold text-brand-700 hover:underline mr-3">Edit</button>
+                    <button onClick={() => del(c.id)} className="text-xs font-bold text-rose-700 hover:underline">Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      {edit && <CategoryForm initial={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load(); }} />}
+    </div>
+  );
+}
+
+function CategoryForm({ initial, onClose, onSaved }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const isEdit = !!initial.id;
+
+  const [f, setF] = useState({
+    slug: initial.slug || '',
+    name: initial.name || '',
+    fruitKind: initial.fruit_kind || 'apple',
+    position: initial.position ?? 0,
+    isActive: initial.is_active ?? true,
+  });
+
+  const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true); setErr(null);
+    try {
+      if (isEdit) await api(`/admin/categories/${initial.id}`, { method: 'PUT', body: f });
+      else        await api('/admin/categories', { method: 'POST', body: f });
+      onSaved();
+    } catch (e) { setErr(e.message); } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-ink/40 backdrop-blur-sm z-40 grid place-items-center p-6" onClick={onClose}>
+      <form onClick={(e) => e.stopPropagation()} onSubmit={submit} className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+        <div className="px-6 py-5 border-b border-line-2 flex items-center justify-between">
+          <h2 className="serif text-2xl">{isEdit ? 'Edit category' : 'New category'}</h2>
+          <button type="button" onClick={onClose} className="w-9 h-9 rounded-lg hover:bg-line-2 grid place-items-center">×</button>
+        </div>
+        <div className="p-6 space-y-4">
+          <Field label="Name" value={f.name} onChange={(v) => set('name', v)} required />
+          <Field label="Slug" value={f.slug} onChange={(v) => set('slug', v)} required />
+          <div className="grid grid-cols-2 gap-4">
+            <Select label="Fruit kind (icon)" value={f.fruitKind} onChange={(v) => set('fruitKind', v)}
+              options={Object.keys(FRUIT).map((k) => ({ value: k, label: k }))} />
+            <Field label="Position" type="number" value={f.position} onChange={(v) => set('position', Number(v))} />
+          </div>
+          <Checkbox label="Is active" value={f.isActive} onChange={(v) => set('isActive', v)} />
+          {err && <div className="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{err}</div>}
+        </div>
+        <div className="px-6 py-4 border-t border-line-2 flex items-center justify-end gap-3">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-line text-sm font-bold">Cancel</button>
+          <button disabled={busy} className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm shadow-brand/40 disabled:opacity-60">
+            {busy ? 'Saving…' : (isEdit ? 'Save changes' : 'Create category')}
           </button>
         </div>
       </form>

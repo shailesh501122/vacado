@@ -11,6 +11,7 @@ const CATEGORIES = [
   { slug: 'organic',     name: 'Organic',     kind: 'spinach',     position: 6 },
   { slug: 'fresh-cuts',  name: 'Fresh Cuts',  kind: 'watermelon',  position: 7 },
   { slug: 'combos',      name: 'Combos',      kind: 'mango',       position: 8 },
+  { slug: 'nabagenet',   name: 'Nabagenet',   kind: 'mango',       position: 9 },
 ];
 
 const PRODUCTS = [

@@ -40,6 +40,9 @@ router.post  ('/coupons',             validate(ctrl.schemas.couponUpsertSchema),
 router.delete('/coupons/:id',         asyncHandler(ctrl.deleteCoupon));
 
 router.get   ('/categories',          asyncHandler(ctrl.listCategoriesAdmin));
+router.post  ('/categories',          validate(ctrl.schemas.categoryUpsertSchema), asyncHandler(ctrl.createCategory));
+router.put   ('/categories/:id',      validate(ctrl.schemas.categoryUpsertSchema), asyncHandler(ctrl.updateCategory));
+router.delete('/categories/:id',      asyncHandler(ctrl.deleteCategory));
 
 router.get   ('/settings/firebase',   asyncHandler(ctrl.getFirebaseSettings));
 router.put   ('/settings/firebase',   validate(ctrl.schemas.firebaseSettingsSchema), asyncHandler(ctrl.updateFirebaseSettings));
