@@ -13,8 +13,8 @@ class Env {
     defaultValue: 'http://161.118.165.248:4000/api/v1',
   );
 
-  /// In production we do not surface the dev OTP bypass code on screen.
-  /// Set to true with --dart-define=DEV_SHOW_OTP=true to enable it for QA.
+  /// Deprecated — kept so older tests/screens compile. The mobile app now
+  /// uses Firebase Phone Auth (configured at runtime from the admin panel).
   static const bool devShowOtp = bool.fromEnvironment('DEV_SHOW_OTP', defaultValue: false);
 
   /// App-wide brand strings.

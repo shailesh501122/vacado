@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'data/api_client.dart';
+import 'data/firebase_phone_auth.dart';
+import 'data/remote_config_repo.dart';
 import 'data/repositories.dart';
+import 'providers/address_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/catalog_provider.dart';
-import 'providers/address_provider.dart';
-import 'screens/onboarding/splash_screen.dart';
-import 'screens/onboarding/onboarding_screen.dart';
-import 'screens/onboarding/login_screen.dart';
 import 'screens/main_shell.dart';
+import 'screens/onboarding/login_screen.dart';
+import 'screens/onboarding/onboarding_screen.dart';
+import 'screens/onboarding/splash_screen.dart';
 import 'theme/app_theme.dart';
 
 class VacadoApp extends StatelessWidget {
@@ -19,26 +21,34 @@ class VacadoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final api = ApiClient();
+    final fb = FirebasePhoneAuth();
 
     return MultiProvider(
       providers: [
         Provider<ApiClient>.value(value: api),
+        Provider<FirebasePhoneAuth>.value(value: fb),
         Provider(create: (_) => CatalogRepository(api)),
         Provider(create: (_) => CartRepository(api)),
         Provider(create: (_) => AddressRepository(api)),
         Provider(create: (_) => OrderRepository(api)),
         Provider(create: (_) => WishlistRepository(api)),
         Provider(create: (_) => CouponRepository(api)),
+        Provider(create: (_) => RemoteConfigRepository(api)),
         ChangeNotifierProvider(create: (ctx) {
-          final p = AuthProvider(api, AuthRepository(api));
-          p.hydrate();
+          final p = AuthProvider(
+            api,
+            AuthRepository(api),
+            ctx.read<RemoteConfigRepository>(),
+            fb,
+          );
+          p.bootstrap();
           return p;
         }),
         ChangeNotifierProxyProvider<AuthProvider, CartProvider>(
           create: (ctx) => CartProvider(ctx.read<CartRepository>()),
           update: (ctx, auth, prev) {
             final p = prev ?? CartProvider(ctx.read<CartRepository>());
-            if (auth.isLoggedIn) { p.refresh(); }
+            if (auth.isLoggedIn) p.refresh();
             return p;
           },
         ),

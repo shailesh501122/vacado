@@ -32,6 +32,22 @@ class AuthRepository {
     final m = Map<String, dynamic>.from(res as Map);
     return UserProfile.fromJson(Map<String, dynamic>.from(m['user'] as Map));
   }
+
+  /// Exchanges a Firebase ID token for our backend's JWT.
+  Future<({String token, UserProfile user})> firebaseLogin({
+    required String idToken,
+    String? name,
+  }) async {
+    final res = await _api.post('/auth/firebase', body: {
+      'idToken': idToken,
+      if (name != null) 'name': name,
+    });
+    final m = Map<String, dynamic>.from(res as Map);
+    return (
+      token: m['token'] as String,
+      user: UserProfile.fromJson(Map<String, dynamic>.from(m['user'] as Map)),
+    );
+  }
 }
 
 class CatalogRepository {
