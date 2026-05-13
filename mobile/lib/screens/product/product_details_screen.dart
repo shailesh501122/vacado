@@ -63,6 +63,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       return const Scaffold(backgroundColor: VTokens.bg, body: Center(child: CircularProgressIndicator(color: VTokens.green)));
     }
 
+    final qty = context.select<CartProvider, int>((c) => c.qtyOf(p.id));
+
     return Scaffold(
       backgroundColor: VTokens.bg,
       body: Stack(
@@ -132,11 +134,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: PrimaryBtn(
-                    label: 'Add to cart · ${p.etaMinutes} min',
-                    icon: Icons.shopping_bag_outlined, fullWidth: true,
-                    onPressed: _addToCart,
-                  ),
+                  child: qty > 0
+                    ? PrimaryBtn(
+                        label: 'View in cart · $qty items',
+                        icon: Icons.shopping_bag_outlined, fullWidth: true,
+                        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CheckoutScreen())),
+                      )
+                    : PrimaryBtn(
+                        label: 'Add to cart · ${p.etaMinutes} min',
+                        icon: Icons.shopping_bag_outlined, fullWidth: true,
+                        onPressed: _addToCart,
+                      ),
                 ),
               ]),
             ),

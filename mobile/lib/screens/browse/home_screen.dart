@@ -68,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (catalog.recommended.isNotEmpty)
             SliverToBoxAdapter(child: _gridSection('Recommended for you', catalog.recommended)),
           SliverToBoxAdapter(
-            child: SizedBox(height: VBottomNav.heightFor(context) + 16),
+            child: SizedBox(height: VBottomNav.heightFor(context) + 80),
           ),
         ],
       ),

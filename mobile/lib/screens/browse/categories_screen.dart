@@ -103,7 +103,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   Widget _leftRail(List cats) {
     return Container(
-      width: 88, padding: const EdgeInsets.only(top: 12, bottom: 120),
+      width: 88, padding: const EdgeInsets.only(top: 12, bottom: 180),
       decoration: const BoxDecoration(border: Border(right: BorderSide(color: VTokens.line2))),
       child: ListView.builder(
         itemCount: cats.length,
@@ -146,7 +146,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     }
     final activeCat = cats[_activeIndex];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 100),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 180),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

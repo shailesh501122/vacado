@@ -8,6 +8,7 @@ import '../../theme/tokens.dart';
 import '../../widgets/back_button.dart';
 import '../../widgets/primitives.dart';
 import '../../widgets/product_card.dart';
+import '../../widgets/cart_bar.dart';
 import '../product/product_details_screen.dart';
 import 'search_screen.dart';
 
@@ -45,23 +46,31 @@ class _ListingScreenState extends State<ListingScreen> {
       backgroundColor: VTokens.bg,
       body: SafeArea(
         bottom: false,
-        child: Column(
+        child: Stack(
           children: [
-            _header(),
-            Expanded(
-              child: _loading
-                ? const Center(child: CircularProgressIndicator(color: VTokens.green))
-                : GridView.builder(
-                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 120),
-                    itemCount: _items.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: .66,
-                    ),
-                    itemBuilder: (_, i) => ProductCard(
-                      product: _items[i],
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProductDetailsScreen(slug: _items[i].slug))),
-                    ),
-                  ),
+            Column(
+              children: [
+                _header(),
+                Expanded(
+                  child: _loading
+                    ? const Center(child: CircularProgressIndicator(color: VTokens.green))
+                    : GridView.builder(
+                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 160),
+                        itemCount: _items.length,
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: .66,
+                        ),
+                        itemBuilder: (_, i) => ProductCard(
+                          product: _items[i],
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProductDetailsScreen(slug: _items[i].slug))),
+                        ),
+                      ),
+                ),
+              ],
+            ),
+            const Align(
+              alignment: Alignment.bottomCenter,
+              child: GlobalCartBar(),
             ),
           ],
         ),

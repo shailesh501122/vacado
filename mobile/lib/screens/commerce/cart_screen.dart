@@ -6,6 +6,7 @@ import '../../providers/address_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/bottom_nav.dart';
 import '../../widgets/fruit_tile.dart';
 import '../../widgets/primitives.dart';
 import 'checkout_screen.dart';
@@ -41,7 +42,7 @@ class CartScreen extends StatelessWidget {
           ),
           if (cart.state.items.isNotEmpty)
             Positioned(
-              left: 0, right: 0, bottom: 0,
+              left: 0, right: 0, bottom: VBottomNav.heightFor(context),
               child: _checkoutBar(context, cart.state.summary),
             ),
         ],

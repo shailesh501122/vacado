@@ -38,6 +38,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
   }
 
   String _eta(int seconds) {
+    if (_data?['status'] == 'delivered') return 'Delivered';
     final m = (seconds / 60).floor();
     final s = seconds - m * 60;
     return '$m min ${s.toString().padLeft(2, '0')} s';
@@ -79,23 +80,25 @@ class _TrackingScreenState extends State<TrackingScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('ARRIVING IN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: VTokens.green700, letterSpacing: .5)),
+                          Text(_data?['status'] == 'delivered' ? 'COMPLETED' : 'ARRIVING IN',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: VTokens.green700, letterSpacing: .5)),
                           Text(_eta(remaining), style: AppTheme.serif(size: 38, letterSpacing: -1)),
                         ],
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(color: VTokens.green25, borderRadius: BorderRadius.circular(99)),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: const [
-                          CircleAvatar(radius: 3, backgroundColor: VTokens.green),
-                          SizedBox(width: 6),
-                          Text('LIVE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: VTokens.green700)),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          CircleAvatar(radius: 3, backgroundColor: _data?['status'] == 'delivered' ? VTokens.green700 : VTokens.green),
+                          const SizedBox(width: 6),
+                          Text(_data?['status'] == 'delivered' ? 'DELIVERED' : 'LIVE',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _data?['status'] == 'delivered' ? VTokens.green700 : VTokens.green700)),
                         ]),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _timeline(events),
+                  _timeline(events, _data?['status'] == 'delivered'),
                   const SizedBox(height: 14),
                   _riderCard(rider),
                 ],
@@ -152,7 +155,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
     ),
   );
 
-  Widget _timeline(List events) {
+  Widget _timeline(List events, bool delivered) {
     if (events.isEmpty) {
       events = [
         {'kind': 'placed',  'title': 'Order confirmed',     'subtitle': 'paid via GPay'},
@@ -162,7 +165,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
     }
     final extended = [
       ...events,
-      {'kind': 'delivered', 'title': 'Delivered', 'subtitle': 'leave at door', 'done': false},
+      {'kind': 'delivered', 'title': 'Delivered', 'subtitle': 'leave at door', 'done': delivered},
     ];
     return Stack(
       children: [
@@ -170,9 +173,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
         Column(
           children: List.generate(extended.length, (i) {
             final e = extended[i];
-            final isFuture = i == extended.length - 1;
-            final active = i == extended.length - 2;
-            return Padding(
+            final isFuture = i == extended.length - 1 && !delivered;
+            final active = i == extended.length - 2 && !delivered;
+            final isDeliveredMark = i == extended.length - 1 && delivered;
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,12 +183,12 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   Container(
                     width: 16, height: 16, alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: isFuture ? Colors.white : (active ? VTokens.green : VTokens.green700),
+                      color: isFuture ? Colors.white : ((active || isDeliveredMark) ? VTokens.green : VTokens.green700),
                       shape: BoxShape.circle,
                       border: isFuture ? Border.all(color: VTokens.line, width: 2) : null,
                       boxShadow: active ? [BoxShadow(color: VTokens.green.withOpacity(.2), blurRadius: 0, spreadRadius: 4)] : null,
                     ),
-                    child: isFuture ? const SizedBox.shrink() : (active ? const SizedBox.shrink() : const Icon(Icons.check_rounded, size: 10, color: Colors.white)),
+                    child: isFuture ? const SizedBox.shrink() : ((active || isDeliveredMark) ? const SizedBox.shrink() : const Icon(Icons.check_rounded, size: 10, color: Colors.white)),
                   ),
                   const SizedBox(width: 14),
                   Expanded(

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import '../theme/tokens.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/cart_bar.dart';
 import 'browse/home_screen.dart';
 import 'browse/categories_screen.dart';
 import 'commerce/cart_screen.dart';
+import 'commerce/checkout_screen.dart';
 import 'product/wishlist_screen.dart';
 import 'account/profile_screen.dart';
+import '../providers/cart_provider.dart';
+import 'package:provider/provider.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -37,9 +41,15 @@ class _MainShellState extends State<MainShell> {
           Positioned.fill(child: IndexedStack(index: _index, children: _pages)),
           Align(
             alignment: Alignment.bottomCenter,
-            child: VBottomNav(
-              activeIndex: _index,
-              onChange: (i) => setState(() => _index = i),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_index != 2) const GlobalCartBar(), // Don't show on Cart tab
+                VBottomNav(
+                  activeIndex: _index,
+                  onChange: (i) => setState(() => _index = i),
+                ),
+              ],
             ),
           ),
         ],
@@ -47,3 +57,4 @@ class _MainShellState extends State<MainShell> {
     );
   }
 }
+
