@@ -4,6 +4,8 @@ const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const { query } = require('../db/pool');
 const { signAdmin } = require('../middleware/adminAuth');
+const { getSetting, setSetting } = require('../services/settingsService');
+const { invalidateFirebase } = require('../services/firebaseService');
 const ApiError = require('../utils/ApiError');
 
 // ─── Auth ──────────────────────────────────────────────────
@@ -303,12 +305,71 @@ async function listCategoriesAdmin(_req, res) {
   res.json({ categories: rows });
 }
 
+// ─── Firebase configuration ─────────────────────────────────
+const firebaseSettingsSchema = z.object({
+  enabled: z.boolean().default(false),
+  apiKey: z.string().default(''),
+  appId: z.string().default(''),
+  projectId: z.string().default(''),
+  messagingSenderId: z.string().default(''),
+  iosAppId: z.string().default(''),
+  iosBundleId: z.string().default(''),
+  androidPackageName: z.string().default('com.vacado.app'),
+  serviceAccountJson: z.union([z.string(), z.record(z.any()), z.null()]).optional(),
+});
+
+async function getFirebaseSettings(_req, res) {
+  const cfg = (await getSetting('auth.firebase')) || {};
+  // Don't ship the full service-account JSON back, just a presence flag.
+  const { serviceAccountJson, ...rest } = cfg;
+  res.json({
+    settings: {
+      ...rest,
+      hasServiceAccount: !!serviceAccountJson,
+    },
+  });
+}
+
+async function updateFirebaseSettings(req, res) {
+  const next = req.body;
+
+  // If the admin sent a string service account JSON, validate that it parses.
+  if (typeof next.serviceAccountJson === 'string' && next.serviceAccountJson.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(next.serviceAccountJson);
+      if (!parsed.project_id || !parsed.private_key) {
+        throw ApiError.badRequest('invalid_service_account', {
+          message: 'Service account JSON must contain project_id and private_key',
+        });
+      }
+      next.serviceAccountJson = parsed;
+      if (!next.projectId) next.projectId = parsed.project_id;
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      throw ApiError.badRequest('invalid_service_account_json', { message: err.message });
+    }
+  }
+
+  // Preserve previously stored service account when the admin sends nothing for it.
+  if (next.serviceAccountJson == null) {
+    const existing = (await getSetting('auth.firebase')) || {};
+    next.serviceAccountJson = existing.serviceAccountJson || null;
+  }
+
+  await setSetting('auth.firebase', next, req.admin.id, true);
+  invalidateFirebase();
+
+  const { serviceAccountJson, ...rest } = next;
+  res.json({ settings: { ...rest, hasServiceAccount: !!serviceAccountJson } });
+}
+
 module.exports = {
-  schemas: { loginSchema, productUpsertSchema, statusSchema, couponUpsertSchema },
+  schemas: { loginSchema, productUpsertSchema, statusSchema, couponUpsertSchema, firebaseSettingsSchema },
   login, me, stats,
   listOrders, getOrder, updateOrderStatus,
   listProducts, createProduct, updateProduct, deleteProduct,
   listCustomers,
   listCoupons, createCoupon, deleteCoupon,
   listCategoriesAdmin,
+  getFirebaseSettings, updateFirebaseSettings,
 };

@@ -147,6 +147,7 @@ const NAV = [
   { k: 'products',  label: 'Products',  icon: 'M3 3h18v6H3V3zm0 8h8v10H3V11zm10 0h8v10h-8V11z' },
   { k: 'customers', label: 'Customers', icon: 'M12 12a4 4 0 100-8 4 4 0 000 8zm-8 9a8 8 0 0116 0H4z' },
   { k: 'coupons',   label: 'Coupons',   icon: 'M3 8a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 000 4v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 000-4V8zm6-2v12' },
+  { k: 'firebase',  label: 'Firebase',  icon: 'M5 18L8 3l4 6 3-3 4 12-7 3z' },
   { k: 'settings',  label: 'Settings',  icon: 'M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3h0a1.7 1.7 0 001-1.5V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8v0a1.7 1.7 0 001.5 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.5 1z' },
 ];
 
@@ -156,7 +157,7 @@ function Shell() {
 
   const Page = useMemo(() => ({
     dashboard: Dashboard, orders: Orders, products: Products,
-    customers: Customers, coupons: Coupons, settings: Settings,
+    customers: Customers, coupons: Coupons, firebase: FirebaseSettings, settings: Settings,
   })[page] || Dashboard, [page]);
 
   return (
@@ -707,6 +708,124 @@ function Settings() {
           <li className="text-ink-3">Admin URL: <code className="text-ink font-bold">{location.origin}/admin</code></li>
           <li className="text-ink-3">Build: <code className="text-ink font-bold">single-file SPA · React 18 (UMD) · Tailwind CDN</code></li>
         </ul>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Firebase config ──────────────────────────────────
+function FirebaseSettings() {
+  const [cfg, setCfg] = useState(null);
+  const [err, setErr] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(null);
+  const [serviceAccount, setServiceAccount] = useState(''); // raw textarea contents
+
+  const load = () => api('/admin/settings/firebase').then((d) => setCfg(d.settings)).catch((e) => setErr(e.message));
+  useEffect(() => { load(); }, []);
+
+  const set = (k, v) => setCfg((s) => ({ ...s, [k]: v }));
+
+  const save = async (e) => {
+    e.preventDefault();
+    setBusy(true); setErr(null); setSaved(null);
+    try {
+      const body = {
+        enabled: !!cfg.enabled,
+        apiKey: cfg.apiKey || '',
+        appId: cfg.appId || '',
+        projectId: cfg.projectId || '',
+        messagingSenderId: cfg.messagingSenderId || '',
+        iosAppId: cfg.iosAppId || '',
+        iosBundleId: cfg.iosBundleId || '',
+        androidPackageName: cfg.androidPackageName || 'com.vacado.app',
+      };
+      if (serviceAccount.trim().length > 0) body.serviceAccountJson = serviceAccount;
+      const r = await api('/admin/settings/firebase', { method: 'PUT', body });
+      setCfg(r.settings);
+      setServiceAccount('');
+      setSaved(new Date().toLocaleTimeString());
+    } catch (e) { setErr(e.message); } finally { setBusy(false); }
+  };
+
+  if (!cfg) return <Loader />;
+
+  return (
+    <div className="space-y-6">
+      <header>
+        <div className="text-[11px] font-bold uppercase tracking-widest text-brand-700">auth</div>
+        <h1 className="serif text-4xl">Firebase phone auth</h1>
+        <p className="text-sm text-ink-3 mt-2 max-w-2xl">
+          Per-instance Firebase configuration. The mobile app fetches the public
+          keys at runtime and uses Firebase to send and verify SMS OTPs. The
+          backend uses the service account to verify the resulting ID tokens.
+          {' '}<a href="https://console.firebase.google.com" target="_blank" className="text-brand-700 font-bold">Firebase console ↗</a>
+        </p>
+      </header>
+
+      <form onSubmit={save} className="space-y-4">
+        <Card>
+          <div className="flex items-center justify-between">
+            <CardHeader title="Enabled" subtitle="Turn this on once the keys below are filled in" />
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={!!cfg.enabled} onChange={(e) => set('enabled', e.target.checked)} className="w-5 h-5 accent-[#22C55E]" />
+              <span className="text-sm font-bold">{cfg.enabled ? 'On' : 'Off'}</span>
+            </label>
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader title="Public web config" subtitle="Project settings → General → Your apps → Web/Android app" />
+          <div className="grid grid-cols-2 gap-4 mt-3">
+            <Field label="Web API key (apiKey)" value={cfg.apiKey} onChange={(v) => set('apiKey', v)} />
+            <Field label="App ID (appId)" value={cfg.appId} onChange={(v) => set('appId', v)} />
+            <Field label="Project ID" value={cfg.projectId} onChange={(v) => set('projectId', v)} />
+            <Field label="Messaging sender ID" value={cfg.messagingSenderId} onChange={(v) => set('messagingSenderId', v)} />
+            <Field label="Android package" value={cfg.androidPackageName} onChange={(v) => set('androidPackageName', v)} />
+            <Field label="iOS bundle ID" value={cfg.iosBundleId} onChange={(v) => set('iosBundleId', v)} />
+            <Field label="iOS app ID" value={cfg.iosAppId} onChange={(v) => set('iosAppId', v)} />
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader title="Service account (private)" subtitle="Project settings → Service accounts → Generate new private key" />
+          <div className="mt-3">
+            {cfg.hasServiceAccount && serviceAccount.length === 0 && (
+              <div className="text-xs bg-brand-25 border border-brand-50 text-brand-700 rounded-lg px-3 py-2 mb-3 inline-block font-bold">
+                ✓ Service account already stored
+              </div>
+            )}
+            <textarea
+              value={serviceAccount}
+              onChange={(e) => setServiceAccount(e.target.value)}
+              rows={10}
+              placeholder={cfg.hasServiceAccount ? 'Paste a new JSON to replace the stored one (or leave blank to keep it)' : 'Paste the full Firebase service-account JSON here…'}
+              className="w-full font-mono text-xs rounded-lg border border-line bg-white px-3 py-2 focus:outline-none focus:border-brand"
+            />
+            <p className="text-[11px] text-ink-3 mt-2">Stored server-side and never returned to the browser. The backend reuses the stored copy if you leave this blank.</p>
+          </div>
+        </Card>
+
+        {err   && <div className="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">{err}</div>}
+        {saved && <div className="text-xs text-brand-700 bg-brand-50 border border-brand-50 rounded-lg px-3 py-2">Saved at {saved}</div>}
+
+        <div className="flex items-center justify-end gap-3">
+          <button type="button" onClick={load} className="px-4 py-2 rounded-lg border border-line text-sm font-bold">Reload</button>
+          <button disabled={busy} className="bg-brand text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm shadow-brand/40 disabled:opacity-60">
+            {busy ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
+      </form>
+
+      <Card>
+        <CardHeader title="Quickstart" />
+        <ol className="list-decimal pl-5 text-sm space-y-2 mt-3 text-ink-2">
+          <li>Create a Firebase project, enable <b>Phone</b> sign-in under Authentication → Sign-in method.</li>
+          <li>Add an Android app with package <code className="font-mono text-xs">{cfg.androidPackageName || 'com.vacado.app'}</code> and your SHA-1 / SHA-256. Add an iOS app with the bundle ID above.</li>
+          <li>Copy the <b>web</b> Firebase config (apiKey, appId, projectId, messagingSenderId) into the fields above.</li>
+          <li>Generate a service-account JSON and paste it below.</li>
+          <li>Flip <b>Enabled</b> on, save, and the mobile app starts using Firebase phone auth instantly.</li>
+        </ol>
       </Card>
     </div>
   );

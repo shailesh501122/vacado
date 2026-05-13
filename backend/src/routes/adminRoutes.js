@@ -32,4 +32,7 @@ router.delete('/coupons/:id',         asyncHandler(ctrl.deleteCoupon));
 
 router.get   ('/categories',          asyncHandler(ctrl.listCategoriesAdmin));
 
+router.get   ('/settings/firebase',   asyncHandler(ctrl.getFirebaseSettings));
+router.put   ('/settings/firebase',   validate(ctrl.schemas.firebaseSettingsSchema), asyncHandler(ctrl.updateFirebaseSettings));
+
 module.exports = router;
