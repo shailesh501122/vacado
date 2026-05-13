@@ -5,7 +5,7 @@ const config = require('./config');
 const { pool } = require('./db/pool');
 
 const server = app.listen(config.port, () => {
-  console.log(`Vacado API listening on http://localhost:${config.port}${config.apiPrefix}`);
+  console.log(`Vacado API listening on port ${config.port}${config.apiPrefix}`);
 });
 
 function shutdown(signal) {

@@ -14,7 +14,7 @@ const config = {
   port: parseInt(env.PORT || '4000', 10),
   apiPrefix: env.API_PREFIX || '/api/v1',
   database: {
-    url: env.DATABASE_URL || 'postgres://vacado:vacado@localhost:5432/vacado',
+    url: env.DATABASE_URL || 'postgres://vacado:vacado@127.0.0.1:5432/vacado',
     ssl: parseBool(env.PGSSL, false),
   },
   jwt: {
