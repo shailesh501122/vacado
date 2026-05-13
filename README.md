@@ -182,8 +182,8 @@ prototype.
 The API also ships a single-page admin console at **`/admin`** — log in with
 the seeded credentials (`Admin` / `Admin@123`) and you get a dashboard with
 revenue, today's orders, status breakdown, and top products, plus full CRUD
-for products and coupons, an orders board with status transitions, and a
-customer list.
+for products and coupons, an orders board with status transitions, a
+customer list, and a **Firebase phone-auth configuration** page.
 
 The console is a self-contained React SPA (no build step — React 18 UMD +
 Tailwind CDN + Babel-Standalone) served from `backend/public/admin/`. It
@@ -196,9 +196,46 @@ Seed or rotate the admin password:
 ADMIN_USERNAME=Admin ADMIN_PASSWORD='Admin@123' npm run seed:admin
 ```
 
-## 6. What's next
+## 6. Phone auth (Firebase) — SaaS config
 
-- Wire a real SMS/WhatsApp OTP provider (Twilio, Gupshup, MSG91).
+The mobile app uses **Firebase Phone Auth** for OTP. Each Vacado instance
+configures its own Firebase project from the admin panel — the public keys
+ship to the app at runtime via `GET /api/v1/config/public`, and the
+service-account JSON stays server-side and is used by the backend to verify
+the Firebase ID token the app exchanges at `POST /api/v1/auth/firebase`.
+
+### One-time setup
+
+1. In the [Firebase console](https://console.firebase.google.com), create a
+   project, then under **Authentication → Sign-in method**, enable **Phone**.
+2. **Project settings → General → Your apps**: add an **Android** app with
+   package `com.vacado.app` (or whichever package you ship with) and your
+   debug + release SHA-1/SHA-256 fingerprints. Add an iOS app with your
+   bundle ID. Copy the **web** API key, App ID, Project ID, and Messaging
+   sender ID — you will paste these into the admin panel.
+3. **Project settings → Service accounts → Generate new private key** — save
+   the JSON.
+4. Open `http://<your-host>/admin` → **Firebase** tab → paste the public keys,
+   paste the service-account JSON, flip **Enabled** on, **Save**.
+5. The mobile app picks up the new config on its next launch (or on hot-restart
+   in dev). Firebase Phone Auth requires app verification — on Android the
+   SDK uses Play Integrity / SMS auto-retrieval, on iOS it uses a silent push.
+6. To rotate the operator: paste a fresh service-account JSON and save — the
+   backend re-initialises the Firebase Admin SDK on the next call.
+
+### Endpoints introduced
+
+| Method | Path                                   | Auth   | Purpose                                          |
+| ------ | -------------------------------------- | ------ | ------------------------------------------------ |
+| GET    | `/api/v1/config/public`                | —      | Firebase web keys + feature flags for mobile app |
+| GET    | `/api/v1/admin/settings/firebase`      | admin  | Read current config (service account redacted)   |
+| PUT    | `/api/v1/admin/settings/firebase`      | admin  | Upsert config + service account JSON             |
+| POST   | `/api/v1/auth/firebase`                | —      | Trade a Firebase ID token for our JWT            |
+
+## 7. What's next
+
 - Plug in a real payment gateway for the `payment_method` flow.
 - Replace the faux delivery map with Mapbox / Google Maps + a websocket
   channel for live rider position.
+- Encrypt the Firebase service-account JSON at rest (e.g. AWS KMS / OCI Vault
+  envelope encryption) — today it's plain JSONB in `app_settings`.

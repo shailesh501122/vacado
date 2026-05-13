@@ -27,6 +27,23 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
   String _country = '+91';
   String _fullPhone = '';
+  bool _refreshingConfig = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Always pull the latest remote config when the login screen opens so a
+    // mid-session change in the admin panel (e.g. enabling Firebase) takes
+    // effect without the user having to force-stop the app.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshConfig());
+  }
+
+  Future<void> _refreshConfig() async {
+    if (!mounted) return;
+    setState(() => _refreshingConfig = true);
+    await context.read<AuthProvider>().refreshConfig();
+    if (mounted) setState(() => _refreshingConfig = false);
+  }
 
   @override
   void dispose() {
@@ -56,6 +73,10 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     _fullPhone = '$_country$raw';
     final auth = context.read<AuthProvider>();
+    // Last-chance retry: maybe the admin just enabled Firebase, refresh once.
+    if (!auth.firebaseConfigured) {
+      await _refreshConfig();
+    }
     if (!auth.firebaseConfigured) {
       setState(() => _error = 'Phone auth has not been configured. Ask an admin to set up Firebase.');
       return;
@@ -137,7 +158,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 20),
                     _infoCard(
                       'Phone auth not configured yet',
-                      'An administrator needs to add the Firebase keys in the admin console before users can sign in.',
+                      _refreshingConfig
+                        ? 'Checking with the server…'
+                        : 'An administrator needs to add the Firebase keys in the admin console before users can sign in.',
+                      onRetry: _refreshingConfig ? null : _refreshConfig,
                     ),
                   ],
                   if (_otpSent) ...[
@@ -265,7 +289,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _infoCard(String title, String body) => Container(
+  Widget _infoCard(String title, String body, {VoidCallback? onRetry}) => Container(
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
       color: VTokens.green25, borderRadius: BorderRadius.circular(14),
@@ -285,6 +309,13 @@ class _LoginScreenState extends State<LoginScreen> {
             Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: VTokens.ink)),
             const SizedBox(height: 2),
             Text(body, style: const TextStyle(fontSize: 12, color: VTokens.ink2, height: 1.4)),
+            if (onRetry != null) ...[
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: onRetry,
+                child: const Text('Retry', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: VTokens.green700)),
+              ),
+            ],
           ],
         ),
       ),
