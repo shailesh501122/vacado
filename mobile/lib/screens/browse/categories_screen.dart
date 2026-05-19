@@ -6,6 +6,7 @@ import '../../providers/catalog_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/fruit_tile.dart';
+import '../product/product_details_screen.dart';
 import 'listing_screen.dart';
 import 'search_screen.dart';
 
@@ -162,7 +163,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               itemBuilder: (_, i) {
                 final p = _items[i];
                 return GestureDetector(
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ListingScreen(category: activeCat.slug, title: activeCat.name))),
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProductDetailsScreen(slug: p.slug))),
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(color: VTokens.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: VTokens.line2)),

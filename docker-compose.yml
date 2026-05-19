@@ -18,25 +18,58 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   api:
     build: ./backend
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 4000
       API_PREFIX: /api/v1
       DATABASE_URL: postgres://vacado:vacado@db:5432/vacado
-      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-use-a-long-random-string}
       JWT_EXPIRES_IN: 30d
       OTP_TTL_SECONDS: 300
-      OTP_DEV_BYPASS: "true"
-      CORS_ORIGIN: "*"
+      OTP_DEV_BYPASS: "false"
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      RATE_LIMIT_WINDOW_MS: 60000
+      RATE_LIMIT_MAX: 120
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-Admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@123}
+      ADMIN_NAME: ${ADMIN_NAME:-Vacado Admin}
     ports:
       - "4000:4000"
-    command: ["sh", "-c", "node src/db/migrate.js && node src/db/seed.js && node src/server.js"]
+    volumes:
+      - vacado_uploads:/app/uploads
+    # Runs migrations then idempotent staff seed on every start.
+    # seed.js is intentionally NOT run here — it TRUNCATEs the DB.
+    # Run it manually ONCE on first deploy:
+    #   docker compose exec api node src/db/seed.js
+    command: ["sh", "-c", "node src/db/migrate.js && node src/db/seedStaff.js && node src/server.js"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
 volumes:
   vacado_pgdata:
+  vacado_uploads:

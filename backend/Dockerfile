@@ -11,6 +11,10 @@ COPY package.json ./
 COPY migrations ./migrations
 COPY src ./src
 
+# Create uploads directory and ensure the node user can write to it.
+# In production, mount a named volume at /app/uploads so files survive restarts.
+RUN mkdir -p /app/uploads/products && chown -R node:node /app/uploads
+
 EXPOSE 4000
 USER node
 CMD ["node", "src/server.js"]

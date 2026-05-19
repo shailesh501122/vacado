@@ -48,7 +48,7 @@ class GlobalCartBar extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 0, 16, floating ? 16 : 0),
       child: GestureDetector(
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CheckoutScreen())),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CheckoutScreen())),
         child: content,
       ),
     );

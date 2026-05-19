@@ -124,6 +124,18 @@ const BANNERS = [
 ];
 
 async function seed() {
+  // Guard: only truncate+reseed when the DB is empty or --force is passed.
+  // This protects admin-managed data from being wiped on every container restart.
+  const force = process.argv.includes('--force');
+  if (!force) {
+    const { pool: checkPool } = require('./pool');
+    const check = await checkPool.query('SELECT count(*)::int AS n FROM products');
+    if (check.rows[0].n > 0) {
+      console.log(`Seed skipped — ${check.rows[0].n} products already exist. Pass --force to reseed.`);
+      return;
+    }
+  }
+
   await withTx(async (client) => {
     console.log('→ clearing existing seed data');
     await client.query('TRUNCATE banners, coupons, order_events, order_items, orders, wishlist_items, cart_items, products, categories RESTART IDENTITY CASCADE');

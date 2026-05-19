@@ -133,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Container(
                   width: 40, height: 40, alignment: Alignment.center,
                   decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(.06), blurRadius: 8, offset: const Offset(0, 2))]),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))]),
                   child: const Icon(Icons.person_outline_rounded, color: VTokens.ink),
                 ),
               ),
@@ -146,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
                 color: Colors.white, borderRadius: BorderRadius.circular(14),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(.05), blurRadius: 8, offset: const Offset(0, 2))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
               ),
               child: Row(children: [
                 const Icon(Icons.search_rounded, size: 20, color: VTokens.ink3),

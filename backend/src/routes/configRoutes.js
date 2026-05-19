@@ -2,6 +2,7 @@
 
 const router = require('express').Router();
 const asyncHandler = require('../utils/asyncHandler');
+const config = require('../config');
 const { getPublicConfig } = require('../services/firebaseService');
 
 // Public mobile-app bootstrap config. No secrets here.
@@ -10,7 +11,7 @@ router.get('/public', asyncHandler(async (_req, res) => {
   res.json({
     firebase,
     features: {
-      otpDevBypass: process.env.OTP_DEV_BYPASS === 'true',
+      otpDevBypass: config.otp.devBypass,
     },
   });
 }));

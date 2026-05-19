@@ -176,6 +176,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
             final isFuture = i == extended.length - 1 && !delivered;
             final active = i == extended.length - 2 && !delivered;
             final isDeliveredMark = i == extended.length - 1 && delivered;
+            return Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,

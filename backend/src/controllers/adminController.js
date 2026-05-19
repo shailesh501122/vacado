@@ -6,6 +6,8 @@ const { query } = require('../db/pool');
 const { signAdmin } = require('../middleware/adminAuth');
 const { getSetting, setSetting } = require('../services/settingsService');
 const { invalidateFirebase } = require('../services/firebaseService');
+const { invalidateCatalogCache } = require('./catalogController');
+const { publicUrlFor } = require('../services/uploadService');
 const ApiError = require('../utils/ApiError');
 
 // ─── Auth ──────────────────────────────────────────────────
@@ -241,6 +243,7 @@ async function createProduct(req, res) {
      p.isOrganic, p.isTrending, p.isBestseller,
      p.imageUrl || null, vendorId]
   );
+  invalidateCatalogCache();
   res.status(201).json({ id: rows[0].id });
 }
 
@@ -267,6 +270,7 @@ async function updateProduct(req, res) {
      p.imageUrl ?? null, id]
   );
   if (!r.rowCount) throw ApiError.notFound('product_not_found');
+  invalidateCatalogCache();
   res.json({ ok: true });
 }
 
@@ -279,13 +283,13 @@ async function deleteProduct(req, res) {
   }
   const r = await query(`DELETE FROM products WHERE id = $1`, [id]);
   if (!r.rowCount) throw ApiError.notFound('product_not_found');
+  invalidateCatalogCache();
   res.json({ ok: true });
 }
 
 // File upload endpoint: returns the absolute URL the admin UI then saves into a product.
 async function uploadProductImage(req, res) {
   if (!req.file) throw ApiError.badRequest('no_file_uploaded');
-  const { publicUrlFor } = require('../services/uploadService');
   const url = publicUrlFor(req, req.file.filename);
   res.json({ url, filename: req.file.filename, size: req.file.size, mimeType: req.file.mimetype });
 }
@@ -367,6 +371,7 @@ async function createCategory(req, res) {
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
     [c.slug, c.name, c.fruitKind, c.position, c.isActive, c.imageUrl || null]
   );
+  invalidateCatalogCache();
   res.status(201).json({ id: rows[0].id });
 }
 
@@ -382,6 +387,7 @@ async function updateCategory(req, res) {
     [c.slug, c.name, c.fruitKind, c.position, c.isActive, c.imageUrl || null, id]
   );
   if (!r.rowCount) throw ApiError.notFound('category_not_found');
+  invalidateCatalogCache();
   res.json({ ok: true });
 }
 
@@ -394,6 +400,7 @@ async function deleteCategory(req, res) {
   }
   const r = await query(`DELETE FROM categories WHERE id = $1`, [id]);
   if (!r.rowCount) throw ApiError.notFound('category_not_found');
+  invalidateCatalogCache();
   res.json({ ok: true });
 }
 

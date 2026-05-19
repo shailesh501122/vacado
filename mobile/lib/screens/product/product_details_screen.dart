@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/fruit_tile.dart';
 import '../../widgets/primitives.dart';
+import '../commerce/checkout_screen.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final String slug;
@@ -138,7 +139,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     ? PrimaryBtn(
                         label: 'View in cart · $qty items',
                         icon: Icons.shopping_bag_outlined, fullWidth: true,
-                        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CheckoutScreen())),
+                        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CheckoutScreen())),
                       )
                     : PrimaryBtn(
                         label: 'Add to cart · ${p.etaMinutes} min',
